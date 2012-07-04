@@ -1124,7 +1124,7 @@ err_window:
 }
 
 /*
- * Set the attributes of an outbound window.
+ * Get the attributes of an outbound window.
  *
  * XXX Not parsing prefetch information.
  */
