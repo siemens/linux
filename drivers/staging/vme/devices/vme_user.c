@@ -171,7 +171,8 @@ static int vme_user_open(struct inode *inode, struct file *file)
 	mutex_lock(&image[minor].mutex);
 	/* Allow device to be opened if a resource is needed and allocated. */
 	if (minor < CONTROL_MINOR && image[minor].resource == NULL) {
-		printk(KERN_ERR "No resources allocated for device\n");
+		printk(KERN_ERR "%s: No resources allocated for device\n",
+		       driver_name);
 		err = -EINVAL;
 		goto err_res;
 	}
@@ -224,13 +225,16 @@ static ssize_t resource_to_user(int minor, char __user *buf, size_t count,
 			(unsigned long)copied);
 		if (retval != 0) {
 			copied = (copied - retval);
-			printk(KERN_INFO "User copy failed\n");
+			printk(KERN_INFO "%s: User copy failed\n",
+				driver_name);
 			return -EINVAL;
 		}
 
 	} else {
 		/* XXX Need to write this */
-		printk(KERN_INFO "Currently don't support large transfers\n");
+		printk(KERN_INFO
+		       "%s: Currently don't support large transfers\n",
+			driver_name);
 		/* Map in pages from userspace */
 
 		/* Call vme_master_read to do the transfer */
@@ -264,7 +268,9 @@ static ssize_t resource_from_user(unsigned int minor, const char __user *buf,
 			image[minor].kern_buf, copied, *ppos);
 	} else {
 		/* XXX Need to write this */
-		printk(KERN_INFO "Currently don't support large transfers\n");
+		printk(KERN_INFO
+		       "%s: Currently don't support large transfers\n",
+			driver_name);
 		/* Map in pages from userspace */
 
 		/* Call vme_master_write to do the transfer */
@@ -285,7 +291,8 @@ static ssize_t buffer_to_user(unsigned int minor, char __user *buf,
 	retval = __copy_to_user(buf, image_ptr, (unsigned long)count);
 	if (retval != 0) {
 		retval = (count - retval);
-		printk(KERN_WARNING "Partial copy to userspace\n");
+		printk(KERN_WARNING "%s: Partial copy to userspace\n",
+			driver_name);
 	} else
 		retval = count;
 
@@ -304,7 +311,8 @@ static ssize_t buffer_from_user(unsigned int minor, const char __user *buf,
 	retval = __copy_from_user(image_ptr, buf, (unsigned long)count);
 	if (retval != 0) {
 		retval = (count - retval);
-		printk(KERN_WARNING "Partial copy to userspace\n");
+		printk(KERN_WARNING "%s: Partial copy to userspace\n",
+			driver_name);
 	} else
 		retval = count;
 
@@ -475,7 +483,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			copied = copy_from_user(&irq_req, (char *)arg,
 						sizeof(struct vme_irq_id));
 			if (copied != 0) {
-				printk(KERN_WARNING "Partial copy from userspace\n");
+				printk(KERN_WARNING
+				       "%s: Partial copy from userspace\n",
+					driver_name);
 				return -EFAULT;
 			}
 
@@ -502,8 +512,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			copied = copy_to_user(argp, &master,
 				sizeof(struct vme_master));
 			if (copied != 0) {
-				printk(KERN_WARNING "Partial copy to "
-					"userspace\n");
+				printk(KERN_WARNING
+				       "%s: Partial copy to userspace\n",
+					driver_name);
 				return -EFAULT;
 			}
 
@@ -514,8 +525,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			copied = copy_from_user(&master, argp, sizeof(master));
 			if (copied != 0) {
-				printk(KERN_WARNING "Partial copy from "
-					"userspace\n");
+				printk(KERN_WARNING
+				       "%s: Partial copy from userspace\n",
+					driver_name);
 				return -EFAULT;
 			}
 
@@ -543,10 +555,11 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 				&slave.cycle);
 
 			copied = copy_to_user(argp, &slave,
-				sizeof(struct vme_slave));
+					      sizeof(struct vme_slave));
 			if (copied != 0) {
-				printk(KERN_WARNING "Partial copy to "
-					"userspace\n");
+				printk(KERN_WARNING
+				       "%s: Partial copy to userspace\n",
+					driver_name);
 				return -EFAULT;
 			}
 
@@ -557,8 +570,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			copied = copy_from_user(&slave, argp, sizeof(slave));
 			if (copied != 0) {
-				printk(KERN_WARNING "Partial copy from "
-					"userspace\n");
+				printk(KERN_WARNING
+				       "%s: Partial copy from userspace\n",
+					driver_name);
 				return -EFAULT;
 			}
 
@@ -598,8 +612,8 @@ static void buf_unalloc(int num)
 {
 	if (image[num].kern_buf) {
 #ifdef VME_DEBUG
-		printk(KERN_DEBUG "vme_user: Releasing buffer at %p\n",
-			image[num].pci_buf);
+		printk(KERN_DEBUG "%s: Releasing buffer at %p\n",
+		       driver_name, image[num].pci_buf);
 #endif
 
 		vme_free_consistent(image[num].resource, image[num].size_buf,
@@ -611,7 +625,7 @@ static void buf_unalloc(int num)
 
 #ifdef VME_DEBUG
 	} else {
-		printk(KERN_DEBUG "vme_user: Buffer not allocated\n");
+		printk(KERN_DEBUG "%s: Buffer not allocated\n", driver_name);
 #endif
 	}
 }
@@ -705,8 +719,9 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 	err = register_chrdev_region(MKDEV(VME_MAJOR, 0), VME_DEVS,
 		driver_name);
 	if (err) {
-		printk(KERN_WARNING "%s: Error getting Major Number %d for "
-		"driver.\n", driver_name, VME_MAJOR);
+		printk(KERN_WARNING
+		       "%s: Error getting major number %d for driver.\n",
+		       driver_name, VME_MAJOR);
 		goto err_region;
 	}
 
@@ -730,16 +745,18 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		image[i].resource = vme_slave_request(vme_user_bridge,
 			VME_A24, VME_SCT);
 		if (image[i].resource == NULL) {
-			printk(KERN_WARNING "Unable to allocate slave "
-				"resource\n");
+			printk(KERN_WARNING
+			       "%s: Unable to allocate slave resource\n",
+				driver_name);
 			goto err_slave;
 		}
 		image[i].size_buf = PCI_BUF_SIZE;
 		image[i].kern_buf = vme_alloc_consistent(image[i].resource,
 			image[i].size_buf, &image[i].pci_buf);
 		if (image[i].kern_buf == NULL) {
-			printk(KERN_WARNING "Unable to allocate memory for "
-				"buffer\n");
+			printk(KERN_WARNING
+			       "%s: Unable to allocate memory for buffer\n",
+				driver_name);
 			image[i].pci_buf = 0;
 			vme_slave_free(image[i].resource);
 			err = -ENOMEM;
@@ -756,15 +773,17 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		image[i].resource = vme_master_request(vme_user_bridge,
 			VME_A32, VME_SCT, VME_D32);
 		if (image[i].resource == NULL) {
-			printk(KERN_WARNING "Unable to allocate master "
-				"resource\n");
+			printk(KERN_WARNING
+			       "%s: Unable to allocate master resource\n",
+				driver_name);
 			goto err_master;
 		}
 		image[i].size_buf = PCI_BUF_SIZE;
 		image[i].kern_buf = kmalloc(image[i].size_buf, GFP_KERNEL);
 		if (image[i].kern_buf == NULL) {
-			printk(KERN_WARNING "Unable to allocate memory for "
-				"master window buffers\n");
+			printk(KERN_WARNING
+			       "%s: Unable to allocate memory for master window buffers\n",
+			       driver_name);
 			err = -ENOMEM;
 			goto err_master_buf;
 		}
