@@ -94,13 +94,13 @@ static unsigned int bus_num;
  * Structure to handle image related parameters.
  */
 struct image_desc {
-	void *kern_buf;	/* Buffer address in kernel space */
-	dma_addr_t pci_buf;	/* Buffer address in PCI address space */
+	void *kern_buf;			/* Buffer address in kernel space */
+	dma_addr_t pci_buf;		/* Buffer address in PCI address space */
 	unsigned long long size_buf;	/* Buffer size */
-	struct semaphore sem;	/* Semaphore for locking image */
-	struct device *device;	/* Sysfs device */
+	struct semaphore sem;		/* Semaphore for locking image */
+	struct device *device;		/* Sysfs device */
 	struct vme_resource *resource;	/* VME resource */
-	int users;		/* Number of current users */
+	int users;			/* Number of current users */
 };
 static struct image_desc image[VME_DEVS];
 
@@ -142,11 +142,11 @@ static int __devinit vme_user_probe(struct vme_dev *);
 static int __devexit vme_user_remove(struct vme_dev *);
 
 static const struct file_operations vme_user_fops = {
-	.open = vme_user_open,
-	.release = vme_user_release,
-	.read = vme_user_read,
-	.write = vme_user_write,
-	.llseek = vme_user_llseek,
+	.open		= vme_user_open,
+	.release	= vme_user_release,
+	.read		= vme_user_read,
+	.write		= vme_user_write,
+	.llseek		= vme_user_llseek,
 	.unlocked_ioctl = vme_user_unlocked_ioctl,
 };
 
@@ -178,7 +178,6 @@ static int vme_user_open(struct inode *inode, struct file *file)
 		goto err_res;
 	}
 
-	/* Increment user count */
 	image[minor].users++;
 
 	up(&image[minor].sem);
@@ -197,7 +196,6 @@ static int vme_user_release(struct inode *inode, struct file *file)
 
 	down(&image[minor].sem);
 
-	/* Decrement user count */
 	image[minor].users--;
 
 	up(&image[minor].sem);
@@ -384,7 +382,7 @@ static ssize_t vme_user_write(struct file *file, const char __user *buf,
 		return 0;
 	}
 
-	/* Ensure not reading past end of the image */
+	/* Ensure we are not reading past end of the image */
 	if (*ppos + count > image_size)
 		okcount = image_size - *ppos;
 	else
@@ -625,9 +623,9 @@ static void buf_unalloc(int num)
 }
 
 static struct vme_driver vme_user_driver = {
-	.name = driver_name,
-	.match = vme_user_match,
-	.probe = vme_user_probe,
+	.name	= driver_name,
+	.match	= vme_user_match,
+	.probe	= vme_user_probe,
 	.remove = __devexit_p(vme_user_remove),
 };
 
@@ -707,7 +705,6 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		image[i].users = 0;
 	}
 
-	/* Initialise statistics counters */
 	reset_counters();
 
 	/* Assign major and minor numbers for the driver */
@@ -757,7 +754,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 	}
 
 	/*
-	 * Request master resources allocate page sized buffers for small
+	 * Request master resources and allocate page sized buffers for small
 	 * reads and writes
 	 */
 	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++) {
@@ -779,7 +776,10 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		}
 	}
 
-	/* Create sysfs entries - on udev systems this creates the dev files */
+	/* 
+	 * Create sysfs entries - on udev systems, this also creates the
+	 * device files
+	 */
 	vme_user_sysfs_class = class_create(THIS_MODULE, driver_name);
 	if (IS_ERR(vme_user_sysfs_class)) {
 		printk(KERN_ERR "Error creating vme_user class.\n");
@@ -787,7 +787,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		goto err_class;
 	}
 
-	/* Add sysfs Entries */
+	/* Add sysfs entries */
 	for (i = 0; i < VME_DEVS; i++) {
 		int num;
 		switch (type[i]) {
@@ -819,7 +819,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 
 	return 0;
 
-	/* Ensure counter set correcty to destroy all sysfs devices */
+	/* Ensure counter set correctly to destroy all sysfs devices */
 	i = VME_DEVS;
 err_sysfs:
 	while (i > 0) {
@@ -828,7 +828,7 @@ err_sysfs:
 	}
 	class_destroy(vme_user_sysfs_class);
 
-	/* Ensure counter set correcty to unalloc all master windows */
+	/* Ensure counter set correctly to unallocate all master windows */
 	i = MASTER_MAX + 1;
 err_master_buf:
 	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++)
@@ -840,7 +840,8 @@ err_master:
 	}
 
 	/*
-	 * Ensure counter set correcty to unalloc all slave windows and buffers
+	 * Ensure counter set correctly to unallocate all slave windows and
+	 * buffers
 	 */
 	i = SLAVE_MAX + 1;
 err_slave:
@@ -862,7 +863,7 @@ static int __devexit vme_user_remove(struct vme_dev *dev)
 {
 	int i;
 
-	/* Remove sysfs Entries */
+	/* Remove sysfs entries */
 	for (i = 0; i < VME_DEVS; i++)
 		device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, i));
 	class_destroy(vme_user_sysfs_class);
@@ -881,7 +882,7 @@ static int __devexit vme_user_remove(struct vme_dev *dev)
 	/* Unregister device driver */
 	cdev_del(vme_user_cdev);
 
-	/* Unregiser the major and minor device numbers */
+	/* Unregister the major and minor device numbers */
 	unregister_chrdev_region(MKDEV(VME_MAJOR, 0), VME_DEVS);
 
 	return 0;
