@@ -33,6 +33,7 @@
 #include <linux/syscalls.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
+#include <linux/major.h>
 
 #include <linux/io.h>
 #include <linux/uaccess.h>
@@ -77,7 +78,6 @@ static unsigned int bus_num;
  * for slaves were repurposed to support all 8 master images on the UniverseII!
  * We shall support 4 masters and 4 slaves with this driver.
  */
-#define VME_MAJOR	221	/* VME Major Device Number */
 #define VME_DEVS	9	/* Number of dev entries */
 
 #define MASTER_MINOR	0
