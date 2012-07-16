@@ -600,7 +600,7 @@ static void buf_unalloc(int num)
 {
 	if (image[num].kern_buf) {
 #ifdef VME_DEBUG
-		printk(KERN_DEBUG "UniverseII:Releasing buffer at %p\n",
+		printk(KERN_DEBUG "vme_user: Releasing buffer at %p\n",
 			image[num].pci_buf);
 #endif
 
@@ -613,7 +613,7 @@ static void buf_unalloc(int num)
 
 #ifdef VME_DEBUG
 	} else {
-		printk(KERN_DEBUG "UniverseII: Buffer not allocated\n");
+		printk(KERN_DEBUG "vme_user: Buffer not allocated\n");
 #endif
 	}
 }
