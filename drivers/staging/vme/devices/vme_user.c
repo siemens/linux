@@ -622,7 +622,7 @@ static void buf_unalloc(int num)
 #endif
 
 		vme_free_consistent(image[num].resource, image[num].size_buf,
-			image[num].kern_buf, image[num].pci_buf);
+				    image[num].kern_buf, image[num].pci_buf);
 
 		image[num].kern_buf = NULL;
 		image[num].pci_buf = 0;
@@ -651,7 +651,7 @@ static int __init vme_user_init(void)
 
 	if (bus_num == 0) {
 		printk(KERN_ERR "%s: No cards, skipping registration\n",
-			driver_name);
+		       driver_name);
 		retval = -ENODEV;
 		goto err_nocard;
 	}
@@ -661,7 +661,7 @@ static int __init vme_user_init(void)
 	 */
 	if (bus_num > VME_USER_BUS_MAX) {
 		printk(KERN_ERR "%s: Driver only able to handle %d buses\n",
-			driver_name, VME_USER_BUS_MAX);
+		       driver_name, VME_USER_BUS_MAX);
 		bus_num = VME_USER_BUS_MAX;
 	}
 
@@ -702,7 +702,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 	/* Save pointer to the bridge device */
 	if (vme_user_bridge != NULL) {
 		printk(KERN_ERR "%s: Driver can only be loaded for 1 device\n",
-			driver_name);
+		       driver_name);
 		err = -EINVAL;
 		goto err_dev;
 	}
@@ -722,7 +722,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 
 	/* Assign major and minor numbers for the driver */
 	err = register_chrdev_region(MKDEV(VME_MAJOR, 0), VME_DEVS,
-		driver_name);
+				     driver_name);
 	if (err) {
 		printk(KERN_WARNING
 		       "%s: Error getting major number %d for driver.\n",
