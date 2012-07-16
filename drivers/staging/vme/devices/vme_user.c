@@ -33,6 +33,7 @@
 #include <linux/syscalls.h>
 #include <linux/mutex.h>
 #include <linux/types.h>
+#include <linux/major.h>
 
 #include <linux/io.h>
 #include <linux/uaccess.h>
@@ -79,7 +80,6 @@ static unsigned int bus_num;
  * for slaves were repurposed to support all 8 master images on the UniverseII!
  * We shall support 4 masters and 4 slaves with this driver.
  */
-#define VME_MAJOR	221	/* VME Major Device Number */
 #define VME_DEVS	9	/* Number of dev entries */
 
 #define MASTER_MINOR	0
@@ -88,7 +88,7 @@ static unsigned int bus_num;
 #define SLAVE_MAX	7
 #define CONTROL_MINOR	8
 
-#define PCI_BUF_SIZE  0x20000	/* Size of one slave image buffer */
+#define PCI_BUF_SIZE  0x20000	/* Size of one slave image buffer: 128 KiB */
 
 /*
  * Structure to handle image related parameters.
@@ -729,7 +729,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		goto err_char;
 	}
 
-	/* Request slave resources and allocate buffers (128kB wide) */
+	/* Request slave resources and allocate buffers */
 	for (i = SLAVE_MINOR; i < (SLAVE_MAX + 1); i++) {
 		/* XXX Need to properly request attributes */
 		/* For ca91cx42 bridge there are only two slave windows
