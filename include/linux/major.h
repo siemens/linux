@@ -169,6 +169,8 @@
 #define IBM_TTY3270_MAJOR	227
 #define IBM_FS3270_MAJOR	228
 
+#define VME_MAJOR		221	/* VME bus */
+
 #define VIOTAPE_MAJOR		230
 
 #define MV_TS_MAJOR		231	/* Marvell Transport Stream driver */
