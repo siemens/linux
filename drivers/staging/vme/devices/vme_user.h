@@ -11,8 +11,8 @@ struct vme_master {
 	unsigned long long vme_addr;	/* Starting Address on the VMEbus */
 	unsigned long long size;	/* Window Size */
 	u32 aspace;			/* Address Space */
-	u32 cycle;		/* Cycle properties */
-	u32 dwidth;		/* Maximum Data Width */
+	u32 cycle;			/* Cycle properties */
+	u32 dwidth;			/* Maximum Data Width */
 #if 0
 	char prefetchEnable;		/* Prefetch Read Enable State */
 	int prefetchSize;		/* Prefetch Read Size (Cache Lines) */
@@ -35,7 +35,7 @@ struct vme_slave {
 	unsigned long long vme_addr;	/* Starting Address on the VMEbus */
 	unsigned long long size;	/* Window Size */
 	u32 aspace;			/* Address Space */
-	u32 cycle;		/* Cycle properties */
+	u32 cycle;			/* Cycle properties */
 #if 0
 	char wrPostEnable;		/* Write Post State */
 	char rmwLock;			/* Lock PCI during RMW Cycles */
@@ -55,4 +55,3 @@ struct vme_irq_id {
 #define VME_IRQ_GEN _IOW(VME_IOC_MAGIC, 5, struct vme_irq_id)
 
 #endif /* _VME_USER_H_ */
-
