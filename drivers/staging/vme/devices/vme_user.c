@@ -467,9 +467,6 @@ static loff_t vme_user_llseek(struct file *file, loff_t off, int whence)
 static int vme_user_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
-	struct vme_master master;
-	struct vme_slave slave;
-	struct vme_irq_id irq_req;
 	unsigned long copied;
 	unsigned int minor = MINOR(inode->i_rdev);
 	int retval;
@@ -484,7 +481,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 	switch (type[minor]) {
 	case CONTROL_MINOR:
 		switch (cmd) {
-		case VME_IRQ_GEN:
+		case VME_IRQ_GEN: {
+			struct vme_irq_id irq_req;
 			copied = copy_from_user(&irq_req, (char *)arg,
 						sizeof(struct vme_irq_id));
 			if (copied != 0) {
@@ -500,10 +498,11 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 		}
-		break;
+		}
 	case MASTER_MINOR:
 		switch (cmd) {
-		case VME_GET_MASTER:
+		case VME_GET_MASTER: {
+			struct vme_master master;
 			memset(&master, 0, sizeof(struct vme_master));
 
 			/* XXX	We do not want to push aspace, cycle and width
@@ -525,9 +524,10 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 			break;
+		}
 
-		case VME_SET_MASTER:
-
+		case VME_SET_MASTER: {
+			struct vme_master master;
 			copied = copy_from_user(&master, argp, sizeof(master));
 			if (copied != 0) {
 				printk(KERN_WARNING
@@ -548,7 +548,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 		break;
 	case SLAVE_MINOR:
 		switch (cmd) {
-		case VME_GET_SLAVE:
+		case VME_GET_SLAVE: {
+			struct vme_slave slave;
 			memset(&slave, 0, sizeof(struct vme_slave));
 
 			/* XXX	We do not want to push aspace, cycle and width
@@ -570,9 +571,10 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 			break;
+		}
 
-		case VME_SET_SLAVE:
-
+		case VME_SET_SLAVE: {
+			struct vme_slave slave;
 			copied = copy_from_user(&slave, argp, sizeof(slave));
 			if (copied != 0) {
 				printk(KERN_WARNING
@@ -590,6 +592,7 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 				slave.cycle);
 
 			break;
+		}
 		}
 		break;
 	}
