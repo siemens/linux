@@ -540,6 +540,25 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			break;
 		}
+
+		case VME_RMW: {
+			struct vme_rmw rmw;
+			copied = copy_from_user(&rmw, argp, sizeof(rmw));
+			if (copied != 0) {
+				printk(KERN_WARNING
+				       "%s: Partial copy from userspace\n",
+				       driver_name);
+				return -EFAULT;
+			}
+
+			retval = vme_master_rmw(image[minor].resource,
+						rmw.mask, rmw.compare,
+						rmw.swap, file->f_pos);
+
+			return retval;
+			break;
+		}
+		}
 		break;
 	case SLAVE_MINOR:
 		switch (cmd) {
