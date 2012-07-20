@@ -299,8 +299,9 @@ static void ca91cx42_irq_set(struct vme_bridge *ca91cx42_bridge, int level,
 	}
 }
 
+// TODO: Timeout is currently ignored
 static int ca91cx42_irq_generate(struct vme_bridge *ca91cx42_bridge, int level,
-	int statid)
+				 int statid, unsigned int timeout_usec)
 {
 	u32 tmp;
 	struct ca91cx42_driver *bridge;

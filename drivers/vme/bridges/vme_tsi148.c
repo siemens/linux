@@ -447,12 +447,13 @@ static void tsi148_irq_set(struct vme_bridge *tsi148_bridge, int level,
 
 /*
  * Generate a VME bus interrupt at the requested level & vector. Wait for
- * interrupt to be acked.
+ * interrupt to be acked, possibly obeying a timeout.
  */
 static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
-	int statid)
+			       int statid, unsigned int timeout_usec)
 {
 	u32 tmp;
+	int ret = 1;
 	struct tsi148_driver *bridge;
 
 	bridge = tsi148_bridge->driver_priv;
@@ -471,13 +472,24 @@ static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
 	tmp = tmp | TSI148_LCSR_VICR_IRQL[level];
 	iowrite32be(tmp, bridge->base + TSI148_LCSR_VICR);
 
-	/* XXX Consider implementing a timeout? */
-	wait_event_interruptible(bridge->iack_queue,
-		tsi148_iack_received(bridge));
+	if (timeout_usec > 0) {
+		ret = wait_event_interruptible_timeout(bridge->iack_queue,
+					       tsi148_iack_received(bridge),
+					       usecs_to_jiffies(timeout_usec));
+	} else {
+		wait_event_interruptible(bridge->iack_queue,
+					 tsi148_iack_received(bridge));
+	}
 
 	mutex_unlock(&bridge->vme_int);
 
-	return 0;
+	if (ret > 0)
+		return 0;
+
+	if (ret == 0)
+		return -ETIMEDOUT;
+
+	return ret;
 }
 
 /*

@@ -147,7 +147,7 @@ struct vme_bridge {
 
 	/* Interrupt Functions */
 	void (*irq_set) (struct vme_bridge *, int, int, int);
-	int (*irq_generate) (struct vme_bridge *, int, int);
+	int (*irq_generate) (struct vme_bridge *, int, int, unsigned int);
 
 	/* Location monitor functions */
 	int (*lm_set) (struct vme_lm_resource *, unsigned long long, u32, u32);

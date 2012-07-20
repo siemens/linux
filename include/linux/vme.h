@@ -154,7 +154,7 @@ int vme_dma_free(struct vme_resource *);
 int vme_irq_request(struct vme_dev *, int, int,
 	void (*callback)(int, int, void *), void *);
 void vme_irq_free(struct vme_dev *, int, int);
-int vme_irq_generate(struct vme_dev *, int, int);
+int vme_irq_generate(struct vme_dev *, int, int, unsigned int);
 
 struct vme_resource *vme_lm_request(struct vme_dev *);
 int vme_lm_count(struct vme_resource *);

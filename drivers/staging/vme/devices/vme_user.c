@@ -489,7 +489,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			retval = vme_irq_generate(vme_user_bridge,
 						  irq_req.level,
-						  irq_req.statid);
+						  irq_req.statid,
+						  irq_req.timeout_usec);
 
 			return retval;
 		}

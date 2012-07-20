@@ -1057,7 +1057,8 @@ void vme_irq_free(struct vme_dev *vdev, int level, int statid)
 }
 EXPORT_SYMBOL(vme_irq_free);
 
-int vme_irq_generate(struct vme_dev *vdev, int level, int statid)
+int vme_irq_generate(struct vme_dev *vdev, int level, int statid,
+		     unsigned int timeout_usec)
 {
 	struct vme_bridge *bridge;
 
@@ -1077,7 +1078,7 @@ int vme_irq_generate(struct vme_dev *vdev, int level, int statid)
 		return -EINVAL;
 	}
 
-	return bridge->irq_generate(bridge, level, statid);
+	return bridge->irq_generate(bridge, level, statid, timeout_usec);
 }
 EXPORT_SYMBOL(vme_irq_generate);
 

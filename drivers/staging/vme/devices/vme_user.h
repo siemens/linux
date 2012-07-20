@@ -46,6 +46,7 @@ struct vme_slave {
 struct vme_irq_id {
 	__u8 level;
 	__u8 statid;
+	unsigned int timeout_usec;
 };
 
 struct vme_rmw {
