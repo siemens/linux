@@ -300,7 +300,7 @@ static void ca91cx42_irq_set(struct vme_bridge *ca91cx42_bridge, int level,
 }
 
 static int ca91cx42_irq_generate(struct vme_bridge *ca91cx42_bridge, int level,
-	int statid)
+				 int statid, unsigned int timeout_usec)
 {
 	u32 tmp;
 	struct ca91cx42_driver *bridge;
@@ -321,6 +321,9 @@ static int ca91cx42_irq_generate(struct vme_bridge *ca91cx42_bridge, int level,
 	/* Assert VMEbus IRQ */
 	tmp = tmp | (1 << (level + 24));
 	iowrite32(tmp, bridge->base + VINT_EN);
+
+	if (timeout_usec)
+		pr_warn("ca91cx42 does not support timeouts!\n");
 
 	/* Wait for IACK */
 	wait_event_interruptible(bridge->iack_queue,
