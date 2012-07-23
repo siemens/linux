@@ -494,6 +494,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 		}
+		case VME_GET_SLOT_ID:
+			return vme_slot_get(vme_user_bridge);
 		}
 	case MASTER_MINOR:
 		switch (cmd) {
