@@ -653,11 +653,50 @@ static void buf_unalloc(int num)
 	}
 }
 
+static char *vme_devnode(struct device *dev, mode_t *mode)
+{
+	struct vme_dev *vme_dev = container_of(dev, struct vme_dev, dev);
+
+	return kasprintf(GFP_KERNEL, "bus/vme/%03d/%03d",
+			 vme_get_bridge_num(vme_dev->bridge),
+			 vme_dev->num);
+}
+
+#ifdef	CONFIG_HOTPLUG
+static int vme_dev_uevent(struct device *dev, struct kobj_uevent_env *env)
+{
+	struct vme_dev *vme_dev = container_of(dev, struct vme_dev, dev);
+
+	if (add_uevent_var(env, "BUSNUM=%03d",
+			   vme_get_bridge_num(vme_dev->bridge)))
+		return -ENOMEM;
+
+	if (add_uevent_var(env, "DEVNUM=%03d", vme_dev->num))
+		return -ENOMEM;
+
+	return 0;
+}
+
+#else
+
+static int vme_dev_uevent(struct device *dev, struct kobj_uevent_env *env)
+{
+	return -ENODEV;
+}
+#endif	/* CONFIG_HOTPLUG */
+
+struct device_type vme_device_type = {
+	.name    = "vme_device",
+	.uevent	 = vme_dev_uevent,
+	.devnode = vme_devnode,
+};
+
 static struct vme_driver vme_user_driver = {
 	.name	= driver_name,
 	.match	= vme_user_match,
 	.probe	= vme_user_probe,
 	.remove = __devexit_p(vme_user_remove),
+	.type	= &vme_device_type,
 };
 
 

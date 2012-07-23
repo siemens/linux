@@ -111,6 +111,7 @@ struct vme_driver {
 	int (*probe)(struct vme_dev *);
 	int (*remove)(struct vme_dev *);
 	void (*shutdown)(void);
+	struct device_type *type;
 	struct device_driver driver;
 	struct list_head devices;
 };
@@ -165,6 +166,7 @@ int vme_lm_detach(struct vme_resource *, int);
 void vme_lm_free(struct vme_resource *);
 
 int vme_slot_get(struct vme_dev *);
+int vme_get_bridge_num(struct vme_bridge *);
 
 int vme_register_driver(struct vme_driver *, unsigned int);
 void vme_unregister_driver(struct vme_driver *);

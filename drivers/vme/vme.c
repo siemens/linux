@@ -1292,6 +1292,11 @@ int vme_slot_get(struct vme_dev *vdev)
 }
 EXPORT_SYMBOL(vme_slot_get);
 
+int vme_get_bridge_num(struct vme_bridge *bridge)
+{
+	return bridge->num;
+}
+EXPORT_SYMBOL(vme_get_bridge_num);
 
 /* - Bridge Registration --------------------------------------------------- */
 
