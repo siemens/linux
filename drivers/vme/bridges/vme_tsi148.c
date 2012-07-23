@@ -2153,6 +2153,22 @@ static int tsi148_slot_get(struct vme_bridge *tsi148_bridge)
 	return (int)slot;
 }
 
+static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
+			     struct vme_status *status)
+{
+	u32 stat = 0;
+	struct tsi148_driver *bridge;
+
+	bridge = tsi148_bridge->driver_priv;
+
+	stat = ioread32be(bridge->base + TSI148_LCSR_INTS);
+
+	status->sysfail = (stat & TSI148_LCSR_INTS_SYSFLS) > 0;
+	status->acfail = (stat & TSI148_LCSR_INTS_ACFLS) > 0;
+
+	return 0;
+}
+
 static void *tsi148_alloc_consistent(struct device *parent, size_t size,
 	dma_addr_t *dma)
 {
@@ -2504,6 +2520,7 @@ static int tsi148_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	tsi148_bridge->lm_attach = tsi148_lm_attach;
 	tsi148_bridge->lm_detach = tsi148_lm_detach;
 	tsi148_bridge->slot_get = tsi148_slot_get;
+	tsi148_bridge->get_status = tsi148_get_status;
 	tsi148_bridge->alloc_consistent = tsi148_alloc_consistent;
 	tsi148_bridge->free_consistent = tsi148_free_consistent;
 
