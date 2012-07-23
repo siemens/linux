@@ -494,6 +494,24 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 		}
+		case VME_GET_STATUS: {
+			struct vme_status status;
+			memset(&status, 0, sizeof(struct vme_status));
+
+			retval = vme_get_status(vme_user_bridge, &status);
+
+			copied = copy_to_user(argp, &status,
+					      sizeof(struct vme_status));
+			if (copied != 0) {
+				printk(KERN_WARNING
+				       "%s: Partial copy to userspace\n",
+					driver_name);
+				return -EFAULT;
+			}
+
+			return retval;
+			break;
+		}
 		case VME_GET_SLOT_ID:
 			return vme_slot_get(vme_user_bridge);
 		}

@@ -1,6 +1,9 @@
 #ifndef _VME_H_
 #define _VME_H_
 
+// TODO: Ugly direct include will disappear after vme_user is in mainline
+#include "../../drivers/staging/vme/devices/vme_user.h"
+
 /* Resource Type */
 enum vme_resource_type {
 	VME_MASTER,
@@ -167,6 +170,7 @@ void vme_lm_free(struct vme_resource *);
 
 int vme_slot_get(struct vme_dev *);
 int vme_get_bridge_num(struct vme_bridge *);
+int vme_get_status(struct vme_dev *, struct vme_status *);
 
 int vme_register_driver(struct vme_driver *, unsigned int);
 void vme_unregister_driver(struct vme_driver *);

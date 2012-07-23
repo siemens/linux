@@ -1,6 +1,9 @@
 #ifndef _VME_BRIDGE_H_
 #define _VME_BRIDGE_H_
 
+// TODO: Ugly direct include will disappear after vme_user is in mainline
+#include "../staging/vme/devices/vme_user.h"
+
 #define VME_CRCSR_BUF_SIZE (508*1024)
 /*
  * Resource structures
@@ -158,6 +161,7 @@ struct vme_bridge {
 
 	/* CR/CSR space functions */
 	int (*slot_get) (struct vme_bridge *);
+	int (*get_status) (struct vme_bridge *, struct vme_status *);
 
 	/* Bridge parent interface */
 	void *(*alloc_consistent)(struct device *dev, size_t size,

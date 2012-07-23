@@ -55,6 +55,13 @@ struct vme_rmw {
 	unsigned int swap;
 };
 
+struct vme_status {
+	unsigned short sysfail:1;
+	unsigned short acfail:1;
+
+	// TODO: Whatever is of interest here
+};
+
 #define VME_GET_SLAVE _IOR(VME_IOC_MAGIC, 1, struct vme_slave)
 #define VME_SET_SLAVE _IOW(VME_IOC_MAGIC, 2, struct vme_slave)
 #define VME_GET_MASTER _IOR(VME_IOC_MAGIC, 3, struct vme_master)
@@ -62,5 +69,6 @@ struct vme_rmw {
 #define VME_IRQ_GEN _IOW(VME_IOC_MAGIC, 5, struct vme_irq_id)
 #define VME_RMW _IOW(VME_IOC_MAGIC, 6, struct vme_rmw)
 #define VME_GET_SLOT_ID _IO(VME_IOC_MAGIC, 7)
+#define VME_GET_STATUS _IOR(VME_IOC_MAGIC, 8, struct vme_status)
 
 #endif /* _VME_USER_H_ */

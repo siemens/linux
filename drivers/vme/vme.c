@@ -32,6 +32,7 @@
 #include <linux/slab.h>
 #include <linux/vme.h>
 
+#include "../staging/vme/devices/vme_user.h"
 #include "vme_bridge.h"
 
 /* Bitmask and list of registered buses both protected by common mutex */
@@ -1297,6 +1298,25 @@ int vme_get_bridge_num(struct vme_bridge *bridge)
 	return bridge->num;
 }
 EXPORT_SYMBOL(vme_get_bridge_num);
+
+int vme_get_status(struct vme_dev *vdev, struct vme_status *status)
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->get_status == NULL) {
+		printk(KERN_WARNING "vme_get_status not supported\n");
+		return -EINVAL;
+	}
+
+	return bridge->get_status(bridge, status);
+}
+EXPORT_SYMBOL(vme_get_status);
 
 /* - Bridge Registration --------------------------------------------------- */
 
