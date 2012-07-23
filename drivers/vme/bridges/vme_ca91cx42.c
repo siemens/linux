@@ -1502,6 +1502,12 @@ static int ca91cx42_slot_get(struct vme_bridge *ca91cx42_bridge)
 
 }
 
+static int ca91cx42_get_status(struct vme_bridge *ca91cx42_bridge,
+			       struct vme_status *status)
+{
+	return -EINVAL;
+}
+
 static void *ca91cx42_alloc_consistent(struct device *parent, size_t size,
 	dma_addr_t *dma)
 {
@@ -1793,6 +1799,7 @@ static int ca91cx42_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	ca91cx42_bridge->lm_attach = ca91cx42_lm_attach;
 	ca91cx42_bridge->lm_detach = ca91cx42_lm_detach;
 	ca91cx42_bridge->slot_get = ca91cx42_slot_get;
+	ca91cx42_bridge->get_status = ca91cx42_get_status;
 	ca91cx42_bridge->alloc_consistent = ca91cx42_alloc_consistent;
 	ca91cx42_bridge->free_consistent = ca91cx42_free_consistent;
 
