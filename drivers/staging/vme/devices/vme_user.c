@@ -15,6 +15,9 @@
  * option) any later version.
  */
 
+#undef pr_fmt
+#define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
+
 #include <linux/cdev.h>
 #include <linux/delay.h>
 #include <linux/device.h>
@@ -34,6 +37,7 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/major.h>
+#include <linux/printk.h>
 
 #include <linux/io.h>
 #include <linux/uaccess.h>
@@ -465,9 +469,8 @@ static loff_t vme_user_llseek(struct file *file, loff_t off, int whence)
 static int vme_user_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
-	unsigned long copied;
 	unsigned int minor = MINOR(inode->i_rdev);
-	int retval;
+	int r = -EFAULT;
 	dma_addr_t pci_addr;
 	void __user *argp = (void __user *)arg;
 
@@ -478,42 +481,35 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 		switch (cmd) {
 		case VME_IRQ_GEN: {
 			struct vme_irq_id irq_req;
-			copied = copy_from_user(&irq_req, (char *)arg,
-						sizeof(struct vme_irq_id));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy from userspace\n",
-					driver_name);
-				return -EFAULT;
-			}
+			if (copy_from_user(&irq_req, (char *)arg,
+					   sizeof(struct vme_irq_id)))
+				goto out;
 
-			retval = vme_irq_generate(vme_user_bridge,
-						  irq_req.level,
-						  irq_req.statid,
-						  irq_req.timeout_usec);
+			r = vme_irq_generate(vme_user_bridge,
+					     irq_req.level,
+					     irq_req.statid,
+					     irq_req.timeout_usec);
 
-			return retval;
+			break;
 		}
 		case VME_GET_STATUS: {
 			struct vme_status status;
 			memset(&status, 0, sizeof(struct vme_status));
 
-			retval = vme_get_status(vme_user_bridge, &status);
+			r = vme_get_status(vme_user_bridge, &status);
 
-			copied = copy_to_user(argp, &status,
-					      sizeof(struct vme_status));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy to userspace\n",
-					driver_name);
-				return -EFAULT;
+			if (copy_to_user(argp, &status,
+					 sizeof(struct vme_status))) {
+				r = -EFAULT;
+				goto out;
 			}
-
-			return retval;
 			break;
 		}
 		case VME_GET_SLOT_ID:
-			return vme_slot_get(vme_user_bridge);
+			r = vme_slot_get(vme_user_bridge);
+			break;
+		default:
+			r = -EINVAL;
 		}
 	case MASTER_MINOR:
 		switch (cmd) {
@@ -524,61 +520,49 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			/* XXX	We do not want to push aspace, cycle and width
 			 *	to userspace as they are
 			 */
-			retval = vme_master_get(image[minor].resource,
-				&master.enable, &master.vme_addr,
-				&master.size, &master.aspace,
-				&master.cycle, &master.dwidth);
+			r = vme_master_get(image[minor].resource,
+					   &master.enable, &master.vme_addr,
+					   &master.size, &master.aspace,
+					   &master.cycle, &master.dwidth);
 
-			copied = copy_to_user(argp, &master,
-				sizeof(struct vme_master));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy to userspace\n",
-					driver_name);
-				return -EFAULT;
+			if (copy_to_user(argp, &master,
+					 sizeof(struct vme_master))) {
+				r = -EFAULT;
+				goto out;
 			}
 
-			return retval;
 			break;
 		}
 
 		case VME_SET_MASTER: {
 			struct vme_master master;
-			copied = copy_from_user(&master, argp, sizeof(master));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy from userspace\n",
-					driver_name);
-				return -EFAULT;
-			}
+			if (copy_from_user(&master, argp, sizeof(master)))
+				goto out;
 
 			/* XXX	We do not want to push aspace, cycle and width
 			 *	to userspace as they are
 			 */
-			return vme_master_set(image[minor].resource,
-				master.enable, master.vme_addr, master.size,
-				master.aspace, master.cycle, master.dwidth);
+			r = vme_master_set(image[minor].resource,
+					   master.enable, master.vme_addr,
+					   master.size, master.aspace,
+					   master.cycle, master.dwidth);
 
 			break;
 		}
 
 		case VME_RMW: {
 			struct vme_rmw rmw;
-			copied = copy_from_user(&rmw, argp, sizeof(rmw));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy from userspace\n",
-				       driver_name);
-				return -EFAULT;
-			}
+			if (copy_from_user(&rmw, argp, sizeof(rmw)))
+				goto out;
 
-			retval = vme_master_rmw(image[minor].resource,
-						rmw.mask, rmw.compare,
-						rmw.swap, file->f_pos);
+			r = vme_master_rmw(image[minor].resource,
+					   rmw.mask, rmw.compare,
+					   rmw.swap, file->f_pos);
 
-			return retval;
 			break;
 		}
+		default:
+			r = -EINVAL;
 		}
 		break;
 	case SLAVE_MINOR:
@@ -590,49 +574,48 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			/* XXX	We do not want to push aspace, cycle and width
 			 *	to userspace as they are
 			 */
-			retval = vme_slave_get(image[minor].resource,
-				&slave.enable, &slave.vme_addr,
-				&slave.size, &pci_addr, &slave.aspace,
-				&slave.cycle);
+			r = vme_slave_get(image[minor].resource,
+					  &slave.enable, &slave.vme_addr,
+					  &slave.size, &pci_addr, &slave.aspace,
+					  &slave.cycle);
 
-			copied = copy_to_user(argp, &slave,
-					      sizeof(struct vme_slave));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy to userspace\n",
-					driver_name);
-				return -EFAULT;
+			if (copy_to_user(argp, &slave,
+					 sizeof(struct vme_slave))) {
+				r = -EINVAL;
+				goto out;
 			}
 
-			return retval;
 			break;
 		}
 
 		case VME_SET_SLAVE: {
 			struct vme_slave slave;
-			copied = copy_from_user(&slave, argp, sizeof(slave));
-			if (copied != 0) {
-				printk(KERN_WARNING
-				       "%s: Partial copy from userspace\n",
-					driver_name);
-				return -EFAULT;
-			}
+			if (copy_from_user(&slave, argp, sizeof(slave)))
+				goto out;
 
 			/* XXX	We do not want to push aspace, cycle and width
 			 *	to userspace as they are
 			 */
-			return vme_slave_set(image[minor].resource,
-				slave.enable, slave.vme_addr, slave.size,
-				image[minor].pci_buf, slave.aspace,
-				slave.cycle);
+			r = vme_slave_set(image[minor].resource,
+					  slave.enable, slave.vme_addr,
+					  slave.size, image[minor].pci_buf,
+					  slave.aspace, slave.cycle);
 
 			break;
 		}
+		default:
+			r = -EINVAL;
 		}
 		break;
+	default:
+		r = -EINVAL;
 	}
 
-	return -EINVAL;
+	return r;
+
+out:
+	pr_warning("Partial copy to userspace\n");
+	return -EFAULT;
 }
 
 static long
