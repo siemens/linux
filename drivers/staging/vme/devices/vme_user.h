@@ -62,5 +62,6 @@ struct vme_rmw {
 #define VME_IRQ_GEN _IOW(VME_IOC_MAGIC, 5, struct vme_irq_id)
 #define VME_RMW _IOW(VME_IOC_MAGIC, 6, struct vme_rmw)
 #define VME_GET_SLOT_ID _IO(VME_IOC_MAGIC, 7)
+#define VME_GET_STATUS _IOR(VME_IOC_MAGIC, 8, struct vme_status)
 
 #endif /* _VME_USER_H_ */

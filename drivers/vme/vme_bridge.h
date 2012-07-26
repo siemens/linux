@@ -158,6 +158,7 @@ struct vme_bridge {
 
 	/* CR/CSR space functions */
 	int (*slot_get) (struct vme_bridge *);
+	int (*get_status) (struct vme_bridge *, struct vme_status *);
 
 	/* Bridge parent interface */
 	void *(*alloc_consistent)(struct device *dev, size_t size,

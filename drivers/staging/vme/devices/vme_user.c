@@ -499,6 +499,24 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			return retval;
 		}
+		case VME_GET_STATUS: {
+			struct vme_status status;
+			memset(&status, 0, sizeof(struct vme_status));
+
+			retval = vme_get_status(vme_user_bridge, &status);
+
+			copied = copy_to_user(argp, &status,
+					      sizeof(struct vme_status));
+			if (copied != 0) {
+				printk(KERN_WARNING
+				       "%s: Partial copy to userspace\n",
+					driver_name);
+				return -EFAULT;
+			}
+
+			return retval;
+			break;
+		}
 		case VME_GET_SLOT_ID:
 			return vme_slot_get(vme_user_bridge);
 		}
@@ -508,9 +526,6 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			struct vme_master master;
 			memset(&master, 0, sizeof(struct vme_master));
 
-			/* XXX	We do not want to push aspace, cycle and width
-			 *	to userspace as they are
-			 */
 			retval = vme_master_get(image[minor].resource,
 				&master.enable, &master.vme_addr,
 				&master.size, &master.aspace,
@@ -539,13 +554,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 				return -EFAULT;
 			}
 
-			/* XXX	We do not want to push aspace, cycle and width
-			 *	to userspace as they are
-			 */
 			return vme_master_set(image[minor].resource,
 				master.enable, master.vme_addr, master.size,
 				master.aspace, master.cycle, master.dwidth);
-
 			break;
 		}
 
@@ -574,9 +585,6 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			struct vme_slave slave;
 			memset(&slave, 0, sizeof(struct vme_slave));
 
-			/* XXX	We do not want to push aspace, cycle and width
-			 *	to userspace as they are
-			 */
 			retval = vme_slave_get(image[minor].resource,
 				&slave.enable, &slave.vme_addr,
 				&slave.size, &pci_addr, &slave.aspace,
@@ -605,14 +613,10 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 				return -EFAULT;
 			}
 
-			/* XXX	We do not want to push aspace, cycle and width
-			 *	to userspace as they are
-			 */
 			return vme_slave_set(image[minor].resource,
 				slave.enable, slave.vme_addr, slave.size,
 				image[minor].pci_buf, slave.aspace,
 				slave.cycle);
-
 			break;
 		}
 		}

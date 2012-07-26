@@ -1311,6 +1311,25 @@ int vme_get_bridge_num(struct vme_bridge *bridge)
 }
 EXPORT_SYMBOL(vme_get_bridge_num);
 
+int vme_get_status(struct vme_dev *vdev, struct vme_status *status)
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->get_status == NULL) {
+		printk(KERN_WARNING "vme_get_status not supported\n");
+		return -EINVAL;
+	}
+
+	return bridge->get_status(bridge, status);
+}
+EXPORT_SYMBOL(vme_get_status);
+
 /* - Bridge Registration --------------------------------------------------- */
 
 static void vme_dev_release(struct device *dev)
