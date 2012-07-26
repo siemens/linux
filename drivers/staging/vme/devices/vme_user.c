@@ -698,15 +698,12 @@ static struct vme_driver vme_user_driver = {
 
 static int __init vme_user_init(void)
 {
-	int retval = 0;
-
 	printk(KERN_INFO "VME User Space Access Driver\n");
 
 	if (bus_num == 0) {
 		printk(KERN_ERR "%s: No cards, skipping registration\n",
 		       driver_name);
-		retval = -ENODEV;
-		goto err_nocard;
+		return -ENODEV;
 	}
 
 	/* Let's start by supporting one bus, we can support more than one
@@ -724,15 +721,7 @@ static int __init vme_user_init(void)
 	 * This way, if we later want to allow multiple user access devices,
 	 * we just change the code in vme_user_match().
 	 */
-	retval = vme_register_driver(&vme_user_driver, VME_MAX_SLOTS);
-	if (retval != 0)
-		goto err_reg;
-
-	return retval;
-
-err_reg:
-err_nocard:
-	return retval;
+	return vme_register_driver(&vme_user_driver, VME_MAX_SLOTS);
 }
 
 static int vme_user_match(struct vme_dev *vdev)
@@ -793,6 +782,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		goto err_char;
 	}
 
+	// TODO: This should only be done on demand
 	/* Request slave resources and allocate buffers */
 	for (i = SLAVE_MINOR; i < (SLAVE_MAX + 1); i++) {
 		/* XXX Need to properly request attributes */
