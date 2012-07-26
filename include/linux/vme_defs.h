@@ -11,6 +11,42 @@ enum vme_resource_type {
 	VME_LM
 };
 
+struct vme_window {
+	enum vme_resource_type type;	/* Master or Slave */
+	u32 aspace;			/* Address Space */
+	u32 cycle;			/* Cycle properties */
+	u32 dwidth;			/* Maximum Data Width */
+};
+
+/*
+ * VMEbus Master Window Configuration Structure
+ */
+struct vme_master {
+	int enable;			/* State of Window */
+	unsigned long long vme_addr;	/* Starting Address on the VMEbus */
+	unsigned long long size;	/* Window Size */
+	struct vme_window win;
+#if 0
+	char prefetchEnable;		/* Prefetch Read Enable State */
+	int prefetchSize;		/* Prefetch Read Size (Cache Lines) */
+	char wrPostEnable;		/* Write Post State */
+#endif
+};
+
+
+/* VMEbus Slave Window Configuration Structure */
+struct vme_slave {
+	int enable;			/* State of Window */
+	unsigned long long vme_addr;	/* Starting Address on the VMEbus */
+	unsigned long long size;	/* Window Size */
+	struct vme_window win;
+#if 0
+	char wrPostEnable;		/* Write Post State */
+	char rmwLock;			/* Lock PCI during RMW Cycles */
+	char data64BitCapable;		/* non-VMEbus capable of 64-bit Data */
+#endif
+};
+
 /* VME Address Spaces */
 #define VME_A16		0x1
 #define VME_A24		0x2
