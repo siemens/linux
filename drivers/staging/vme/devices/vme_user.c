@@ -459,6 +459,189 @@ static loff_t vme_user_llseek(struct file *file, loff_t off, int whence)
 }
 
 /*
+ * Unallocate a previously allocated buffer
+ */
+static void buf_unalloc(int num)
+{
+	if (image[num].kern_buf) {
+#ifdef VME_DEBUG
+		printk(KERN_DEBUG "%s: Releasing buffer at %p\n",
+		       driver_name, image[num].pci_buf);
+#endif
+
+		vme_free_consistent(image[num].resource, image[num].size_buf,
+				    image[num].kern_buf, image[num].pci_buf);
+
+		image[num].kern_buf = NULL;
+		image[num].pci_buf = 0;
+		image[num].size_buf = 0;
+
+#ifdef VME_DEBUG
+	} else {
+		printk(KERN_DEBUG "%s: Buffer not allocated\n", driver_name);
+#endif
+	}
+}
+
+
+/* Caller must ensure that i represents a master window */
+void vme_cleanup_master(int i)
+{
+	device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, i));
+	kfree(image[i].kern_buf);
+	vme_master_free(image[i].resource);
+}
+
+/* Caller must ensure that i represents a slave window */
+void vme_cleanup_slave(int i)
+{
+	vme_slave_set(image[i].resource, 0, 0, 0, 0, VME_A32, 0);
+	buf_unalloc(i);
+	vme_slave_free(image[i].resource);
+}
+
+int vme_create_sysfs_entry(int i)
+{
+	int num;
+	char name[12];
+
+	switch (type[i]) {
+	case MASTER_MINOR:
+		sprintf(name, "bus/vme/m%%d");
+		break;
+	case CONTROL_MINOR:
+		sprintf(name, "bus/vme/ctl");
+		break;
+	case SLAVE_MINOR:
+		sprintf(name, "bus/vme/s%%d");
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	num = (type[i] == SLAVE_MINOR) ? i - (MASTER_MAX + 1) : i;
+	image[i].device = device_create(vme_user_sysfs_class, NULL,
+					MKDEV(VME_MAJOR, i), NULL, name, num);
+	if (IS_ERR(image[i].device)) {
+		pr_err("Error creating sysfs device\n");
+		return PTR_ERR(image[i].device);
+	}
+
+	return i;
+}
+
+static int get_vme_minor(enum vme_resource_type type)
+{
+	int start, end, i;
+
+	switch (type) {
+	case VME_MASTER:
+		start = MASTER_MINOR;
+		end = MASTER_MAX;
+		break;
+	case VME_SLAVE:
+		start = SLAVE_MINOR;
+		end = SLAVE_MAX;
+	default:
+		return -EINVAL;
+	}
+
+	for (i = start; i <= end; i++) {
+		if (image[i].resource == NULL)
+			return i;
+	}
+
+	// All available windows are taken
+	return -EMFILE;
+}
+
+static int request_slave_window(struct vme_window *window)
+{
+	int i;
+
+	// TODO: Does this belong here? Likely not. If there
+	// is no bridge, then there;s no control file.
+	if (!vme_user_bridge)
+		return -ENODEV;
+
+	i = get_vme_minor(window->type);
+
+	/* All available windows are taken */
+	if (i < 0)
+		return i;
+
+	/* Request slave window and allocate buffer */
+	/* XXX Need to properly request attributes */
+
+	/* For ca91cx42 bridge there are only two slave windows
+	 * supporting A16 addressing, so we request A24 supported
+	 * by all windows.
+	 */
+	image[i].resource = vme_slave_request(vme_user_bridge,
+					      VME_A24, VME_SCT);
+	if (image[i].resource == NULL) {
+		pr_warn("Unable to allocate slave resource\n");
+		return -ENODEV;
+	}
+
+	image[i].size_buf = PCI_BUF_SIZE;
+	image[i].kern_buf = vme_alloc_consistent(image[i].resource,
+						 image[i].size_buf,
+						 &image[i].pci_buf);
+	if (image[i].kern_buf == NULL) {
+		pr_warn("Unable to allocate memory for buffer\n");
+		image[i].pci_buf = 0;
+		vme_slave_free(image[i].resource);
+		image[i].resource = NULL;
+		return -ENOMEM;
+	}
+
+	return i;
+}
+
+static int request_master_window(struct vme_window *window)
+{
+	int i;
+
+	// TODO: Does this belong here? Likely not. If there
+	// is no bridge, then there;s no control file.
+	if (!vme_user_bridge)
+		return -ENODEV;
+
+	i = get_vme_minor(window->type);
+
+	/* All available windows are taken */
+	if (i < 0)
+		return -EMFILE;
+
+	/*
+	 * Request master resource and allocate page sized buffer for small
+	 * reads and writes
+	 */
+
+	/* XXX Need to properly request attributes */
+	image[i].resource = vme_master_request(vme_user_bridge,
+					       VME_A32, VME_SCT, VME_D32);
+	if (image[i].resource == NULL) {
+		pr_warn("Unable to allocate master resource\n");
+		return -ENODEV;
+	}
+
+	image[i].size_buf = PCI_BUF_SIZE;
+	image[i].kern_buf = kmalloc(image[i].size_buf, GFP_KERNEL);
+	if (image[i].kern_buf == NULL) {
+		pr_warn("Unable to allocate memory for master window buffers\n");
+		image[i].pci_buf = 0; // TODO: What good for?
+		vme_master_free(image[i].resource);
+		image[i].resource = NULL;
+		return -ENOMEM;
+	}
+
+	return i;
+}
+
+
+/*
  * The ioctls provided by the old VME access method (the one at vmelinux.org)
  * are most certainly wrong as the effectively push the registers layout
  * through to user space. Given that the VME core can handle multiple bridges,
@@ -480,6 +663,10 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 #ifdef VME_DEBUG
 	printk(KERN_INFO "VME: ioctl received\n");
 #endif	
+
+	if (type[minor] != CONTROL_MINOR)
+		if (image[minor].resource == NULL)
+			return -EINVAL;
 
 	switch (type[minor]) {
 	case CONTROL_MINOR:
@@ -513,6 +700,49 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 		case VME_GET_SLOT_ID:
 			r = vme_slot_get(vme_user_bridge);
 			break;
+		case VME_REQUEST_WINDOW: {
+			struct vme_window window;
+			int i;
+
+			if (copy_from_user(&window, argp, sizeof(window)))
+				goto out;
+
+			switch (window.type) {
+			case VME_MASTER:
+				i = request_master_window(&window);
+				break;
+			case VME_SLAVE:
+				i = request_slave_window(&window);
+				break;
+			default:
+				return -EINVAL;
+			}
+
+			if (i < 0) {
+				pr_err("Could not allocate window\n");
+				return i;
+			}
+
+			r = vme_create_sysfs_entry(i);
+
+			if (r < 0) {
+				switch(window.type) {
+				case VME_MASTER:
+					vme_cleanup_master(i);
+					break;
+				case VME_SLAVE:
+					vme_cleanup_slave(i);
+					break;
+				default:
+					return -EINVAL; /* To please gcc */
+				}
+
+				return r;
+			}
+
+			break;
+		}
+
 		default:
 			r = -EINVAL;
 		}
@@ -524,8 +754,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			r = vme_master_get(image[minor].resource,
 					   &master.enable, &master.vme_addr,
-					   &master.size, &master.aspace,
-					   &master.cycle, &master.dwidth);
+					   &master.size, &master.win.aspace,
+					   &master.win.cycle,
+					   &master.win.dwidth);
 
 			if (copy_to_user(argp, &master,
 					 sizeof(struct vme_master))) {
@@ -543,8 +774,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			r = vme_master_set(image[minor].resource,
 					   master.enable, master.vme_addr,
-					   master.size, master.aspace,
-					   master.cycle, master.dwidth);
+					   master.size, master.win.aspace,
+					   master.win.cycle, master.win.dwidth);
 
 			break;
 		}
@@ -572,8 +803,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			r = vme_slave_get(image[minor].resource,
 					  &slave.enable, &slave.vme_addr,
-					  &slave.size, &pci_addr, &slave.aspace,
-					  &slave.cycle);
+					  &slave.size, &pci_addr,
+					  &slave.win.aspace, &slave.win.cycle);
 
 			if (copy_to_user(argp, &slave,
 					 sizeof(struct vme_slave))) {
@@ -592,7 +823,7 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			r = vme_slave_set(image[minor].resource,
 					  slave.enable, slave.vme_addr,
 					  slave.size, image[minor].pci_buf,
-					  slave.aspace, slave.cycle);
+					  slave.win.aspace, slave.win.cycle);
 
 			break;
 		}
@@ -621,32 +852,6 @@ vme_user_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	mutex_unlock(&vme_user_mutex);
 
 	return ret;
-}
-
-
-/*
- * Unallocate a previously allocated buffer
- */
-static void buf_unalloc(int num)
-{
-	if (image[num].kern_buf) {
-#ifdef VME_DEBUG
-		printk(KERN_DEBUG "%s: Releasing buffer at %p\n",
-		       driver_name, image[num].pci_buf);
-#endif
-
-		vme_free_consistent(image[num].resource, image[num].size_buf,
-				    image[num].kern_buf, image[num].pci_buf);
-
-		image[num].kern_buf = NULL;
-		image[num].pci_buf = 0;
-		image[num].size_buf = 0;
-
-#ifdef VME_DEBUG
-	} else {
-		printk(KERN_DEBUG "%s: Buffer not allocated\n", driver_name);
-#endif
-	}
 }
 
 static char *vme_devnode(struct device *dev, mode_t *mode)
@@ -739,14 +944,12 @@ static int vme_user_match(struct vme_dev *vdev)
 static int __devinit vme_user_probe(struct vme_dev *vdev)
 {
 	int i, err;
-	char name[12];
 
 	/* Save pointer to the bridge device */
 	if (vme_user_bridge != NULL) {
 		printk(KERN_ERR "%s: Driver can only be loaded for 1 device\n",
 		       driver_name);
-		err = -EINVAL;
-		goto err_dev;
+		return -EINVAL;
 	}
 	vme_user_bridge = vdev;
 
@@ -769,7 +972,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		printk(KERN_WARNING
 		       "%s: Error getting major number %d for driver.\n",
 		       driver_name, VME_MAJOR);
-		goto err_region;
+		return err;
 	}
 
 	/* Register the driver as a char device */
@@ -782,64 +985,11 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		goto err_char;
 	}
 
-	// TODO: This should only be done on demand
-	/* Request slave resources and allocate buffers */
-	for (i = SLAVE_MINOR; i < (SLAVE_MAX + 1); i++) {
-		/* XXX Need to properly request attributes */
-		/* For ca91cx42 bridge there are only two slave windows
-		 * supporting A16 addressing, so we request A24 supported
-		 * by all windows.
-		 */
-		image[i].resource = vme_slave_request(vme_user_bridge,
-			VME_A24, VME_SCT);
-		if (image[i].resource == NULL) {
-			printk(KERN_WARNING
-			       "%s: Unable to allocate slave resource\n",
-				driver_name);
-			goto err_slave;
-		}
-		image[i].size_buf = PCI_BUF_SIZE;
-		image[i].kern_buf = vme_alloc_consistent(image[i].resource,
-			image[i].size_buf, &image[i].pci_buf);
-		if (image[i].kern_buf == NULL) {
-			printk(KERN_WARNING
-			       "%s: Unable to allocate memory for buffer\n",
-				driver_name);
-			image[i].pci_buf = 0;
-			vme_slave_free(image[i].resource);
-			err = -ENOMEM;
-			goto err_slave;
-		}
-	}
-
-	/*
-	 * Request master resources and allocate page sized buffers for small
-	 * reads and writes
-	 */
-	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++) {
-		/* XXX Need to properly request attributes */
-		image[i].resource = vme_master_request(vme_user_bridge,
-			VME_A32, VME_SCT, VME_D32);
-		if (image[i].resource == NULL) {
-			printk(KERN_WARNING
-			       "%s: Unable to allocate master resource\n",
-				driver_name);
-			goto err_master;
-		}
-		image[i].size_buf = PCI_BUF_SIZE;
-		image[i].kern_buf = kmalloc(image[i].size_buf, GFP_KERNEL);
-		if (image[i].kern_buf == NULL) {
-			printk(KERN_WARNING
-			       "%s: Unable to allocate memory for master window buffers\n",
-			       driver_name);
-			err = -ENOMEM;
-			goto err_master_buf;
-		}
-	}
 
 	/* 
-	 * Create sysfs entries - on udev systems, this also creates the
-	 * device files
+	 * Create sysfs class and an entry for the control file Entries for
+	 * the device files will be dynamically created after
+	 * VME_REQUEST_WINDOW.
 	 */
 	vme_user_sysfs_class = class_create(THIS_MODULE, driver_name);
 	if (IS_ERR(vme_user_sysfs_class)) {
@@ -848,75 +998,13 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 		goto err_class;
 	}
 
-	/* Add sysfs entries */
-	for (i = 0; i < VME_DEVS; i++) {
-		int num;
-		switch (type[i]) {
-		case MASTER_MINOR:
-			sprintf(name, "bus/vme/m%%d");
-			break;
-		case CONTROL_MINOR:
-			sprintf(name, "bus/vme/ctl");
-			break;
-		case SLAVE_MINOR:
-			sprintf(name, "bus/vme/s%%d");
-			break;
-		default:
-			err = -EINVAL;
-			goto err_sysfs;
-			break;
-		}
+	vme_create_sysfs_entry(CONTROL_MINOR);
 
-		num = (type[i] == SLAVE_MINOR) ? i - (MASTER_MAX + 1) : i;
-		image[i].device = device_create(vme_user_sysfs_class, NULL,
-					MKDEV(VME_MAJOR, i), NULL, name, num);
-		if (IS_ERR(image[i].device)) {
-			printk(KERN_INFO "%s: Error creating sysfs device\n",
-				driver_name);
-			err = PTR_ERR(image[i].device);
-			goto err_sysfs;
-		}
-	}
-
-	return 0;
-
-	/* Ensure counter set correctly to destroy all sysfs devices */
-	i = VME_DEVS;
-err_sysfs:
-	while (i > 0) {
-		i--;
-		device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, i));
-	}
-	class_destroy(vme_user_sysfs_class);
-
-	/* Ensure counter set correctly to unallocate all master windows */
-	i = MASTER_MAX + 1;
-err_master_buf:
-	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++)
-		kfree(image[i].kern_buf);
-err_master:
-	while (i > MASTER_MINOR) {
-		i--;
-		vme_master_free(image[i].resource);
-	}
-
-	/*
-	 * Ensure counter set correctly to unallocate all slave windows and
-	 * buffers
-	 */
-	i = SLAVE_MAX + 1;
-err_slave:
-	while (i > SLAVE_MINOR) {
-		i--;
-		buf_unalloc(i);
-		vme_slave_free(image[i].resource);
-	}
 err_class:
 	cdev_del(vme_user_cdev);
 err_char:
 	unregister_chrdev_region(MKDEV(VME_MAJOR, 0), VME_DEVS);
-err_region:
-err_dev:
+
 	return err;
 }
 
@@ -925,19 +1013,29 @@ static int __devexit vme_user_remove(struct vme_dev *dev)
 	int i;
 
 	/* Remove sysfs entries */
-	for (i = 0; i < VME_DEVS; i++)
-		device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, i));
+	for (i = 0; i < VME_DEVS; i++) {
+		if (image[i].resource) {
+			mutex_destroy(&image[i].mutex);
+			device_destroy(vme_user_sysfs_class,
+				       MKDEV(VME_MAJOR, i));
+		}
+	}
 	class_destroy(vme_user_sysfs_class);
 
 	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++) {
-		kfree(image[i].kern_buf);
-		vme_master_free(image[i].resource);
+		if (image[i].resource) {
+			kfree(image[i].kern_buf);
+			vme_master_free(image[i].resource);
+		}
 	}
 
 	for (i = SLAVE_MINOR; i < (SLAVE_MAX + 1); i++) {
-		vme_slave_set(image[i].resource, 0, 0, 0, 0, VME_A32, 0);
-		buf_unalloc(i);
-		vme_slave_free(image[i].resource);
+		if (image[i].resource) {
+			vme_slave_set(image[i].resource, 0, 0, 0, 0,
+				      VME_A32, 0);
+			buf_unalloc(i);
+			vme_slave_free(image[i].resource);
+		}
 	}
 
 	/* Unregister device driver */

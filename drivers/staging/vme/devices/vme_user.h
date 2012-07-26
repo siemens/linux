@@ -30,5 +30,6 @@ struct vme_rmw {
 #define VME_RMW _IOW(VME_IOC_MAGIC, 6, struct vme_rmw)
 #define VME_GET_SLOT_ID _IO(VME_IOC_MAGIC, 7)
 #define VME_GET_STATUS _IOR(VME_IOC_MAGIC, 8, struct vme_status)
+#define VME_REQUEST_WINDOW _IOR(VME_IOC_MAGIC, 9, struct vme_window)
 
 #endif /* _VME_USER_H_ */
