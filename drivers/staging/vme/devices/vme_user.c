@@ -697,6 +697,16 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 			}
 			break;
 		}
+		case VME_REQUEST_BUS:
+			r = vme_set_dwb(vme_user_bridge, 1);
+			break;
+		case VME_RELEASE_BUS:
+			r = vme_set_dwb(vme_user_bridge, 0);
+			break;
+		case VME_QUERY_DWB_DHB:
+			r = vme_get_dwb_dhb(vme_user_bridge,
+					    (enum vme_dwb_dhb)arg);
+			break;
 		case VME_GET_SLOT_ID:
 			r = vme_slot_get(vme_user_bridge);
 			break;
