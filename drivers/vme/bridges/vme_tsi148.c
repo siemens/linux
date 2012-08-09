@@ -2146,6 +2146,45 @@ static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
 	return 0;
 }
 
+static int tsi148_set_dwb(struct vme_bridge *tsi148_bridge,
+			  unsigned short dwb)
+{
+	u32 reg = 0;
+	struct tsi148_driver *bridge;
+
+	bridge = tsi148_bridge->driver_priv;
+
+	reg = ioread32be(bridge->base + TSI148_LCSR_VMCTRL);
+	if (dwb)
+		reg |= TSI148_LCSR_VMCTRL_DWB;
+	else
+		reg &= ~TSI148_LCSR_VMCTRL_DWB;
+
+	iowrite32be(reg, bridge->base + TSI148_LCSR_VMCTRL);
+
+	return 0;
+}
+
+static int tsi148_get_dwb_dhb(struct vme_bridge *tsi148_bridge,
+			      enum vme_dwb_dhb type)
+{
+	u32 reg = 0;
+	struct tsi148_driver *bridge;
+
+	bridge = tsi148_bridge->driver_priv;
+
+	reg = ioread32be(bridge->base + TSI148_LCSR_VMCTRL);
+	switch (type) {
+	case VME_DWB:
+		return (reg & TSI148_LCSR_VMCTRL_DWB) > 0;
+
+	case VME_DHB:
+		return (reg & TSI148_LCSR_VMCTRL_DHB) > 0;
+	}
+
+	return -EINVAL;
+}
+
 void *tsi148_alloc_consistent(struct device *parent, size_t size,
 	dma_addr_t *dma)
 {
@@ -2498,6 +2537,8 @@ static int tsi148_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	tsi148_bridge->lm_detach = tsi148_lm_detach;
 	tsi148_bridge->slot_get = tsi148_slot_get;
 	tsi148_bridge->get_status = tsi148_get_status;
+	tsi148_bridge->set_dwb = tsi148_set_dwb;
+	tsi148_bridge->get_dwb_dhb = tsi148_get_dwb_dhb;
 	tsi148_bridge->alloc_consistent = tsi148_alloc_consistent;
 	tsi148_bridge->free_consistent = tsi148_free_consistent;
 
