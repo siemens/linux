@@ -117,6 +117,8 @@ void vme_lm_free(struct vme_resource *);
 int vme_slot_get(struct vme_dev *);
 int vme_get_bridge_num(struct vme_bridge *);
 int vme_get_status(struct vme_dev *, struct vme_status *);
+int vme_set_dwb(struct vme_dev *, unsigned short);
+int vme_get_dwb_dhb(struct vme_dev *, enum vme_dwb_dhb);
 
 int vme_register_driver(struct vme_driver *, unsigned int);
 void vme_unregister_driver(struct vme_driver *);

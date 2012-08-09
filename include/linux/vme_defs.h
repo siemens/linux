@@ -11,6 +11,11 @@ enum vme_resource_type {
 	VME_LM
 };
 
+enum vme_dwb_dhb {
+	VME_DWB,	/* Device wants bus */
+	VME_DHB		/* Device has bus */
+};
+
 struct vme_window {
 	enum vme_resource_type type;	/* Master or Slave */
 	u32 aspace;			/* Address Space */

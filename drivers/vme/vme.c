@@ -1330,6 +1330,44 @@ int vme_get_status(struct vme_dev *vdev, struct vme_status *status)
 }
 EXPORT_SYMBOL(vme_get_status);
 
+int vme_set_dwb(struct vme_dev *vdev, unsigned short dwb)
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->set_dwb == NULL) {
+		printk(KERN_WARNING "vme_set_dwb not supported\n");
+		return -EINVAL;
+	}
+
+	return bridge->set_dwb(bridge, dwb);
+}
+EXPORT_SYMBOL(vme_set_dwb);
+
+int vme_get_dwb_dhb(struct vme_dev *vdev, enum vme_dwb_dhb type)
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->get_status == NULL) {
+		printk(KERN_WARNING "vme_set_dwb not supported\n");
+		return -EINVAL;
+	}
+
+	return bridge->get_dwb_dhb(bridge, type);
+}
+EXPORT_SYMBOL(vme_get_dwb_dhb);
+
 /* - Bridge Registration --------------------------------------------------- */
 
 static void vme_dev_release(struct device *dev)

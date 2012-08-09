@@ -159,6 +159,8 @@ struct vme_bridge {
 	/* CR/CSR space functions */
 	int (*slot_get) (struct vme_bridge *);
 	int (*get_status) (struct vme_bridge *, struct vme_status *);
+	int (*set_dwb) (struct vme_bridge *, unsigned short dwb);
+	int (*get_dwb_dhb) (struct vme_bridge *, enum vme_dwb_dhb);
 
 	/* Bridge parent interface */
 	void *(*alloc_consistent)(struct device *dev, size_t size,
