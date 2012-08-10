@@ -1315,6 +1315,7 @@ EXPORT_SYMBOL(vme_lm_get);
 int vme_lm_attach(struct vme_resource *resource, int monitor,
 	void (*callback)(int))
 {
+	int res;
 	struct vme_bridge *bridge = find_bridge(resource);
 	struct vme_lm_resource *lm;
 
@@ -1330,12 +1331,19 @@ int vme_lm_attach(struct vme_resource *resource, int monitor,
 		return -EINVAL;
 	}
 
-	return bridge->lm_attach(lm, monitor, callback);
+	mutex_lock(&bridge->irq_mtx);
+
+	res = bridge->lm_attach(lm, monitor, callback);
+
+	mutex_unlock(&bridge->irq_mtx);
+
+	return res;
 }
 EXPORT_SYMBOL(vme_lm_attach);
 
 int vme_lm_detach(struct vme_resource *resource, int monitor)
 {
+	int res;
 	struct vme_bridge *bridge = find_bridge(resource);
 	struct vme_lm_resource *lm;
 
@@ -1351,7 +1359,13 @@ int vme_lm_detach(struct vme_resource *resource, int monitor)
 		return -EINVAL;
 	}
 
-	return bridge->lm_detach(lm, monitor);
+	mutex_lock(&bridge->irq_mtx);
+
+	res = bridge->lm_detach(lm, monitor);
+
+	mutex_unlock(&bridge->irq_mtx);
+
+	return res;
 }
 EXPORT_SYMBOL(vme_lm_detach);
 

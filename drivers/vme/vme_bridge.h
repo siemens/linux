@@ -121,8 +121,7 @@ struct vme_bridge {
 	void (*sysfail_callback)(struct vme_bridge *);
 	void (*acfail_callback)(struct vme_bridge *);
 
-	/* Locking for VME irq callback configuration (including sysfail
-	   and acfail interrupts) */
+	/* Locking for VME interrupt mask manipulations */
 	struct mutex irq_mtx;
 
 	/* Slave Functions */
