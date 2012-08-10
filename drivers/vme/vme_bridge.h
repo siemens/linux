@@ -91,6 +91,8 @@ struct vme_irq {
 	struct vme_callback callback[255];
 };
 
+enum vme_failure { VME_ACFAIL, VME_SYSFAIL };
+
 /* Allow 16 characters for name (including null character) */
 #define VMENAMSIZ 16
 
@@ -116,7 +118,11 @@ struct vme_bridge {
 
 	/* Interrupt callbacks */
 	struct vme_irq irq[7];
-	/* Locking for VME irq callback configuration */
+	void (*sysfail_callback)(struct vme_bridge *);
+	void (*acfail_callback)(struct vme_bridge *);
+
+	/* Locking for VME irq callback configuration (including sysfail
+	   and acfail interrupts) */
 	struct mutex irq_mtx;
 
 	/* Slave Functions */
@@ -148,6 +154,10 @@ struct vme_bridge {
 	/* Interrupt Functions */
 	void (*irq_set) (struct vme_bridge *, int, int, int);
 	int (*irq_generate) (struct vme_bridge *, int, int, unsigned int);
+
+	/* Enable/disable acfail and sysfail interrupts */
+	int (*failure_enable) (struct vme_bridge *, enum vme_failure);
+	void (*failure_disable) (struct vme_bridge *, enum vme_failure);
 
 	/* Location monitor functions */
 	int (*lm_set) (struct vme_lm_resource *, unsigned long long, u32, u32);

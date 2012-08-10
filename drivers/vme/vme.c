@@ -1069,6 +1069,101 @@ void vme_irq_free(struct vme_dev *vdev, int level, int statid)
 }
 EXPORT_SYMBOL(vme_irq_free);
 
+int vme_failure_attach(struct vme_dev *vdev, enum vme_failure failure,
+		       void (*callback)(struct vme_bridge *))
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->failure_enable == NULL) {
+		printk(KERN_ERR "Failure interrupts are not supported\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&bridge->irq_mtx);
+
+	switch (failure) {
+	case VME_ACFAIL:
+		if (bridge->acfail_callback != NULL)
+			bridge->acfail_callback = callback;
+		else
+			goto out_err;
+		break;
+	case VME_SYSFAIL:
+		if (bridge->sysfail_callback != NULL)
+			bridge->sysfail_callback = callback;
+		else
+			goto out_err;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	bridge->failure_enable(bridge, failure);
+
+	mutex_unlock(&bridge->irq_mtx);
+
+	return 0;
+
+out_err:
+	mutex_unlock(&bridge->irq_mtx);
+	printk(KERN_WARNING "Failure callback already attached\n");
+	return -EBUSY;
+}
+EXPORT_SYMBOL(vme_failure_attach);
+
+int vme_failure_detach(struct vme_dev *vdev, enum vme_failure failure)
+{
+	struct vme_bridge *bridge;
+
+	bridge = vdev->bridge;
+	if (bridge == NULL) {
+		printk(KERN_ERR "Can't find VME bus\n");
+		return -EINVAL;
+	}
+
+	if (bridge->failure_disable == NULL) {
+		printk(KERN_ERR "Failure interrupts are not supported\n");
+		return -EINVAL;
+	}
+
+	mutex_lock(&bridge->irq_mtx);
+
+	bridge->failure_disable(bridge, failure);
+
+	switch (failure) {
+	case VME_ACFAIL:
+		if (bridge->acfail_callback == NULL)
+			goto out_err;
+		bridge->acfail_callback = NULL;
+		break;
+
+	case VME_SYSFAIL:
+		if (bridge->sysfail_callback == NULL)
+			goto out_err;
+		bridge->sysfail_callback = NULL;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+
+	mutex_unlock(&bridge->irq_mtx);
+
+	return 0;
+
+out_err:
+	printk(KERN_WARNING "No failure callback attached\n");
+	mutex_unlock(&bridge->irq_mtx);
+	return -ENOENT;
+}
+EXPORT_SYMBOL(vme_failure_detach);
+
 int vme_irq_generate(struct vme_dev *vdev, int level, int statid,
 		     unsigned int timeout_usec)
 {
