@@ -216,6 +216,41 @@ static u32 tsi148_IACK_irqhandler(struct tsi148_driver *bridge)
 }
 
 /*
+ * Handle system failure interrupts (acfail and sysfail).
+ */
+static u32 tsi148_failure_irqhandler(struct vme_bridge *bridge,
+				     enum vme_failure failure)
+{
+	u32 serviced = 0;
+	void (*cb)(struct vme_bridge *);
+
+	switch (failure) {
+	case VME_ACFAIL:
+		cb = bridge->acfail_callback;
+		break;
+	case VME_SYSFAIL:
+		cb = bridge->sysfail_callback;
+		break;
+	default:
+		return 0;
+	}
+
+	if (cb) {
+		(*cb)(bridge);
+		serviced |= TSI148_LCSR_INTC_SYSFLC;
+	} else {
+		/*
+		 * Should not happen; when no handler is registered,
+		 *  the interrupt is masked
+		 */
+		dev_err(bridge->parent,
+			"Encountered unhandled SYSFAIL interrupt?!\n");
+	}
+
+	return serviced;
+}
+
+/*
  * Calling VME bus interrupt callback if provided.
  */
 static u32 tsi148_VIRQ_irqhandler(struct vme_bridge *tsi148_bridge,
@@ -295,6 +330,16 @@ static irqreturn_t tsi148_irqhandler(int irq, void *ptr)
 	if (stat & TSI148_LCSR_INTS_IACKS)
 		serviced |= tsi148_IACK_irqhandler(bridge);
 
+	/* System failure */
+	if (stat & TSI148_LCSR_INTS_SYSFLS)
+		serviced |= tsi148_failure_irqhandler(tsi148_bridge,
+						      VME_SYSFAIL);
+
+	/* AC failure */
+	if (stat & TSI148_LCSR_INTS_ACFLS)
+		serviced |= tsi148_failure_irqhandler(tsi148_bridge,
+						      VME_ACFAIL);
+
 	/* VME bus irqs */
 	if (stat & (TSI148_LCSR_INTS_IRQ7S | TSI148_LCSR_INTS_IRQ6S |
 			TSI148_LCSR_INTS_IRQ5S | TSI148_LCSR_INTS_IRQ4S |
@@ -341,8 +386,13 @@ static int tsi148_irq_init(struct vme_bridge *tsi148_bridge)
 		TSI148_LCSR_INTEO_PERREO | TSI148_LCSR_INTEO_VERREO |
 		TSI148_LCSR_INTEO_IACKEO;
 
-	/* This leaves the following interrupts masked.
+	/* This leaves the following interrupt masked.
 	 * TSI148_LCSR_INTEO_VIEEO
+	 */
+
+	/*
+	 * Don't enable the sysfail and acfail interrupts here - they will be
+	 * enabled when a callback is attached.
 	 * TSI148_LCSR_INTEO_SYSFLEO
 	 * TSI148_LCSR_INTEO_ACFLEO
 	 */
@@ -2110,6 +2160,77 @@ static int tsi148_lm_detach(struct vme_lm_resource *lm, int monitor)
 	return 0;
 }
 
+static inline void tsi148_get_failure_regs(enum vme_failure failure,
+					   u32* out, u32* enable, u32 *clear)
+{
+	switch (failure) {
+	case VME_SYSFAIL:
+		*out = TSI148_LCSR_INTEO_SYSFLEO;
+		*enable = TSI148_LCSR_INTEN_SYSFLEN;
+		*clear = TSI148_LCSR_INTC_SYSFLC;
+		break;
+	case VME_ACFAIL:
+		*out = TSI148_LCSR_INTEO_ACFLEO;
+		*enable = TSI148_LCSR_INTEN_ACFLEN;
+		*clear = TSI148_LCSR_INTC_ACFLC;
+		break;
+	default:
+		/* Must not happen */
+		printk(KERN_ERR "Internal error: unknown failure interrupt\n");
+	}
+}
+
+/* Enable the SYSFAIL/ACFAIL interrupt. Must be called under bridge->irq_mtx */
+static int tsi148_failure_enable(struct vme_bridge *tsi148_bridge,
+				 enum vme_failure failure)
+{
+	// Initialised to please gcc
+	u32 status, enable=0, out=0, clear=0;
+	struct tsi148_driver *bridge;
+
+	tsi148_get_failure_regs(failure, &out, &enable, &clear);
+
+	bridge = tsi148_bridge->driver_priv;
+
+	/* Enable sysfail/acfail interrupt */
+	status = ioread32be(bridge->base + TSI148_LCSR_INTEO);
+	status |= out;
+	iowrite32be(status, bridge->base + TSI148_LCSR_INTEO);
+
+	status = ioread32be(bridge->base + TSI148_LCSR_INTEN);
+	status |= enable;
+	iowrite32be(status, bridge->base + TSI148_LCSR_INTEN);
+
+	return 0;
+}
+
+/* Disable the SYSFAIL/ACFAIL interrupt. Must be called under bridge->irq_mtx */
+static void tsi148_failure_disable(struct vme_bridge *tsi148_bridge,
+				   enum vme_failure failure)
+{
+	// Initialised to please gcc
+	u32 status, out=0, enable=0, clear=0;
+	struct tsi148_driver *bridge;
+
+	tsi148_get_failure_regs(failure, &out, &enable, &clear);
+
+	bridge = tsi148_bridge->driver_priv;
+
+	/*
+	 * Disable sysfail/acfail interrupt and ensure previous
+	 * interrupts are clear
+	 */
+	status = ioread32be(bridge->base + TSI148_LCSR_INTEN);
+	status &= ~enable;
+	iowrite32be(status, bridge->base + TSI148_LCSR_INTEN);
+
+	status = ioread32be(bridge->base + TSI148_LCSR_INTEO);
+	status &= ~out;
+	iowrite32be(status, bridge->base + TSI148_LCSR_INTEO);
+
+	iowrite32be(clear, bridge->base + TSI148_LCSR_INTC);
+}
+
 /*
  * Determine Geographical Addressing
  */
@@ -2531,6 +2652,8 @@ static int tsi148_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	tsi148_bridge->dma_list_empty = tsi148_dma_list_empty;
 	tsi148_bridge->irq_set = tsi148_irq_set;
 	tsi148_bridge->irq_generate = tsi148_irq_generate;
+	tsi148_bridge->failure_enable = tsi148_failure_enable;
+	tsi148_bridge->failure_disable = tsi148_failure_disable;
 	tsi148_bridge->lm_set = tsi148_lm_set;
 	tsi148_bridge->lm_get = tsi148_lm_get;
 	tsi148_bridge->lm_attach = tsi148_lm_attach;
