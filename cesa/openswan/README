@@ -1,0 +1,57 @@
+OpenSWAN
+=========
+ In order to explore the KW CESA through the OpenSWAN, 2 patches should be applied to the OpenSWAN.
+
+ download openswan-2.4.9 (http://www.openswan.org/), then untar+unzip it.
+ apply the patches (in the following order):
+
+ - ocf-openswan-2.4.9-20070727.patch - a patch from OCF to include the OCF support into the IPsec DP.
+ - mv-ocf-openswan-2.4.9-20070727.patch -
+                add support for tasklet usage
+                add OCF support by default. (packaging/linus/config-all.h packaging/makefiles/module.defs)
+		use OCF in user space.
+		remove DEBUG info. 
+        
+ and compile:
+
+ + ipsec module (cross compilation) :
+  'make KERNELSRC=<path to this release, after config> module ARCH=arm'
+  then copy the module to the host FS: /lib/modules/2.6.12-arm1/kernel/net/ipsec/
+
+ + ipsec user (native) :
+  make sure that you have the kernel source on the FS.
+  'make KERNELSRC=<path to this release, after config> programs'
+ (	- Need to copy cryptodev.h from the kernel crypto/ocf/ to include/crypto/
+	- Need to copy autoconf from the kernel include to include, in order to overcome missing include path of pluto compilation. )
+  'make install'
+
+  basic vpn connection:
+  +++++++++++++++++++++
+ - platform: KW to KW conncted with egiga.
+ - make sure you have 'ip' (part of the iproute package) installed.
+ - edit /etc/ipsec.conf (on both KW FS) ,check the "man ipsec.conf" :
+
+config setup
+        interfaces="ipsec0=egiga0"    # Virtual/physical interfaces
+        klipsdebug="none"             # Debug KLIPS
+        plutodebug="none"             # Debug PLUTO
+
+conn kw_psk_vpn
+    type=tunnel                    # type of the connection: tunnel(default),passthrough,transport,reject,drop
+    authby=secret
+    left=192.168.1.1
+    leftsubnet=192.168.1.0/16
+    right=192.168.0.1              # Remote information
+    rightsubnet=192.168.0.0/16
+    auto=start                     # start this connection at startup
+
+
+ - edit /etc/ipsec.secrets (on both KW FS) to have shared secret.
+192.168.1.1 192.168.0.1 : PSK "123456"
+
+ - kw1: 'ifconfig egiga0 192.168.0.1 netmask 255.255.0.0'
+ - kw2: 'ifconfig egiga0 192.168.1.1 netmask 255.255.0.0'
+ - check connectivity: ping from kw1 to 192.168.1.1
+ - '/etc/init.d/ipsec start' (on both KW), create new interface ipsec0.
+ - check connectivity: ping from kw1 to 192.168.1.1 --> VPN is working (make sure by sniffing)
+

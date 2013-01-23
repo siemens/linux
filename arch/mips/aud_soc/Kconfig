@@ -1,0 +1,92 @@
+if  AUD_SOC
+
+config AUD_SOC1
+	bool
+	default y
+
+menu "Siemens AuD Soc Options"
+
+choice
+	prompt "board selection"
+	default AUD_SOC1_CP342_5
+
+config AUD_SOC1_CP1500
+	bool "AuD Soc1 CP 1500"
+	depends on MIPS && AUD_SOC1
+
+config AUD_SOC1_CP342_5
+	bool "AuD Soc1 CP342-5"
+	depends on MIPS && AUD_SOC1
+
+config AUD_SOC1_CP443_5
+	bool "AuD Soc1 CP443-5"
+	depends on MIPS && AUD_SOC1
+
+config AUD_SOC1_CP1626
+	bool "AuD Soc1 CP1626"
+	depends on MIPS && AUD_SOC1
+
+endchoice
+
+config AUD_SOC1_CP1500_PROTO_VERSION
+	int "CP 1500 board version"
+        range 0 3
+        default 3
+	depends on AUD_SOC1_CP1500
+	help
+	  select version of cp1500 board
+
+config SERIAL_AUD_SOC
+	tristate "Siemens AuD SOC Serial port support"
+	depends on MIPS && AUD_SOC
+	select SERIAL_CORE
+	help
+	  Support for the on-chip UART on the Siemens AUD SOC1 CPU,
+	  providing /dev/tty0.
+
+config SERIAL_AUD_SOC_CONSOLE
+	bool "Support for console on Siemens AUD SOC serial port"
+	depends on SERIAL_AUD_SOC=y
+	select SERIAL_CORE_CONSOLE
+	help
+	  Allow selection of the Siemens AUD SOC on-board serial port
+	  for use as an virtual console.
+
+config SERIAL_AUD_SOC_WITH_INTR
+	bool "Siemens AUD SOC serial port with interrupt support"
+	depends on SERIAL_AUD_SOC=y
+	help
+	  Use the Siemens AUD SOC on-board serial port with interrupts.
+
+config SERIAL_SOC_INTR_MODE_REALTIME
+	bool "Siemens AUD SOC serial port with realtime interrupt support"
+	depends on SERIAL_AUD_SOC_WITH_INTR && RTX_DOMAIN
+	help
+	  Use the Siemens AUD SOC on-board serial port with realtime:
+	  we buffer the characters within a realtime driver and propagate
+	  them to the linux driver
+
+config SERIAL_ENABLE_RT_HOT_KEY
+	bool "hot key support to interrupt realtime domain"
+	depends on SERIAL_SOC_INTR_MODE_REALTIME=y
+	help
+	  permanently running threads within the realtime domain can't
+	  be debugged. The hot key mechanism allows these threads to be
+	  interrupted.
+	  This support should be selected together with the quota
+	  configuration to get a linux cpu quota.
+
+config SELECT_MIPS_COMPARE_TIMEBASE
+	bool "select MIPS comparator as timebase"
+	select CEVT_R4K
+	help
+	  MIPS AUD SOC boards use the external timers as default time base.
+	  This default time base only works for tickbased configurations.
+	  select this option when you want to use a tickless,
+	  high resolution time base
+
+endmenu
+
+source "drivers/aud/application_driver/Kconfig"
+
+endif

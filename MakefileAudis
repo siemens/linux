@@ -1,0 +1,646 @@
+
+OBJ = ../generated/linux/
+
+# will now be passed as parameter or environment variable
+# make AUDIS_TOOL_PATH=xxxx -f MakefileAudis yyy
+# or 'setenv AUDIS_TOOL_PATH /xxx' or 'export AUDIS_TOOL_PATH=/xxx'
+TOOL = $(AUDIS_TOOL_PATH)
+#TOOL = /home/wyoming1/nm3801/linux_tools
+#TOOL = /aud/aud_dev/linux_tools
+
+
+ROOTFS_BASE = $(AUDIS_TOOL_PATH)/rootfs
+IMAGE_BASE_MIPS = $(ROOTFS_BASE)/build_mips/image
+IMAGE_BASE_ERTEC = $(ROOTFS_BASE)/build_ertec/image
+IMAGE_BASE_MAP1 = $(ROOTFS_BASE)/build_arm_eb/image
+
+linux_all:
+	make -f MakefileAudis linux_x86
+	make -f MakefileAudis linux_mips_cp1500
+	make -f MakefileAudis linux_ppc_khe
+
+linux_x86:
+	make -f MakefileAudis linux_config_x86
+	make -f MakefileAudis linux_build_x86
+
+linux_x686_tdcboard:
+	make -f MakefileAudis linux_config_x686_tdcboard
+	make -f MakefileAudis linux_build_x686_tdcboard
+
+linux_mips_cp1500:
+	make -f MakefileAudis linux_config_mips_cp1500
+	make -f MakefileAudis linux_build_mips_cp1500
+	make -f MakefileAudis linux_image_mips_cp1500
+
+linux_mips_bcm5331:
+	make -f MakefileAudis linux_config_mips_bcm5331
+	make -f MakefileAudis linux_build_mips_bcm5331
+
+linux_ppc_khe:
+	make -f MakefileAudis linux_config_ppc_khe
+	make -f MakefileAudis linux_build_ppc_khe
+	make -f MakefileAudis linux_image_ppc_khe
+
+linux_arm_marvell:
+	make -f MakefileAudis linux_config_arm_marvell
+	make -f MakefileAudis linux_build_arm_marvell
+
+linux_arm_X500:
+	make -f MakefileAudis linux_config_arm_x500
+	make -f MakefileAudis linux_build_arm_x500
+
+linux_arm_cp1243:
+	make -f MakefileAudis linux_config_arm_cp1243
+	make -f MakefileAudis linux_build_arm_cp1243
+
+linux_arm_cortex:
+	make -f MakefileAudis linux_config_arm_cortex
+	make -f MakefileAudis linux_build_arm_cortex
+
+linux_menuconfig_arm_cortex:
+	make O=$(OBJ)/build_arm_cortex CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm menuconfig
+
+linux_config_arm_cortex:
+	mkdir -p $(OBJ)/build_arm_cortex
+	rm -rf  $(OBJ)/build_arm_cortex/*
+	make O=$(OBJ)/build_arm_cortex CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm imx6_audis_defconfig
+
+linux_build_arm_cortex:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_arm_cortex CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage -j $(CORES)
+else
+	make O=$(OBJ)/build_arm_cortex CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage
+endif 
+
+
+linux_copyhdr_arm_cortex:
+	mkdir -p $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/linux $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/asm-generic $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rfL arch/arm/include/asm $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf $(OBJ)/build_arm_cortex/include/linux/* $(TOOL)/arm-v42-linux-gnueabi/include/linux
+	cp -rf $(OBJ)/build_arm_cortex/include/asm/* $(TOOL)/arm-v42-linux-gnueabi/include/asm
+
+linux_menuconfig_arm_cp1243:
+	make O=$(OBJ)/build_arm_cp1243 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm menuconfig
+
+linux_config_arm_cp1243:
+	mkdir -p $(OBJ)/build_arm_cp1243
+	rm -rf  $(OBJ)/build_arm_cp1243/*
+	make O=$(OBJ)/build_arm_cp1243 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm cp1243_defconfig
+
+linux_build_arm_cp1243:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_arm_cp1243 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage -j $(CORES)
+else
+	make O=$(OBJ)/build_arm_cp1243 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage
+endif 
+
+
+linux_copyhdr_arm_cp1243:
+	mkdir -p $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/linux $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/asm-generic $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rfL arch/arm/include/asm $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf $(OBJ)/build_arm_cp1243/include/linux/* $(TOOL)/arm-v42-linux-gnueabi/include/linux
+	cp -rf $(OBJ)/build_arm_cp1243/include/asm/* $(TOOL)/arm-v42-linux-gnueabi/include/asm
+
+
+linux_menuconfig_arm_x500:
+	make O=$(OBJ)/build_arm_x500 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm menuconfig
+
+linux_config_arm_x500:
+	mkdir -p $(OBJ)/build_arm_x500
+	rm -rf  $(OBJ)/build_arm_x500/*
+	make O=$(OBJ)/build_arm_x500 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm X500PROTOTYPE_defconfig
+
+linux_build_arm_x500:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_arm_x500 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage -j $(CORES)
+else
+	make O=$(OBJ)/build_arm_x500 CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage
+endif 
+
+
+linux_copyhdr_arm_x500:
+	mkdir -p $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/linux $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/asm-generic $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rfL arch/arm/include/asm $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf $(OBJ)/build_arm_x500/include/linux/* $(TOOL)/arm-v42-linux-gnueabi/include/linux
+	cp -rf $(OBJ)/build_arm_x500/include/asm/* $(TOOL)/arm-v42-linux-gnueabi/include/asm
+
+
+linux_menuconfig_arm_marvell:
+	make O=$(OBJ)/build_arm_marvell CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm menuconfig
+
+linux_config_arm_marvell:
+	mkdir -p $(OBJ)/build_arm_marvell
+	rm -rf  $(OBJ)/build_arm_marvell/*
+	make O=$(OBJ)/build_arm_marvell CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm db_98dx4122_spi_2_6_31_12_defconfig
+
+linux_build_arm_marvell:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_arm_marvell CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage -j $(CORES)
+else
+	make O=$(OBJ)/build_arm_marvell CC=arm-v42-gcc AS=arm-v42-as LD=arm-v42-ld OBJCOPY=arm-v42-objcopy AR=arm-v42-ar ARCH=arm uImage
+endif 
+
+
+linux_copyhdr_arm_marvell:
+	mkdir -p $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/linux $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf include/asm-generic $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rfL arch/arm/include/asm $(TOOL)/arm-v42-linux-gnueabi/include
+	cp -rf $(OBJ)/build_arm_marvell/include/linux/* $(TOOL)/arm-v42-linux-gnueabi/include/linux
+	cp -rf $(OBJ)/build_arm_marvell/include/asm/* $(TOOL)/arm-v42-linux-gnueabi/include/asm
+
+
+linux_menuconfig_ppc_cp15431:
+	make O=$(OBJ)/build_ppc_cp15431 CROSS_COMPILE=ppc-v42- ARCH=powerpc menuconfig
+
+linux_config_ppc_cp15431:
+	mkdir -p $(OBJ)/build_ppc_cp15431
+	rm -rf  $(OBJ)/build_ppc_cp15431/*
+	make O=$(OBJ)/build_ppc_cp15431 CROSS_COMPILE=ppc-v42- ARCH=powerpc cp15431_defconfig
+
+linux_build_ppc_cp15431:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_ppc_cp15431 CROSS_COMPILE=ppc-v42- ARCH=powerpc -j $(CORES)
+else
+	make O=$(OBJ)/build_ppc_cp15431 CROSS_COMPILE=ppc-v42- ARCH=powerpc
+endif 
+
+
+linux_copyhdr_ppc:
+	mkdir -p $(TOOL)/powerpc-v42-linux-gnueabi/include
+	cp -rf include/linux $(TOOL)/powerpc-v42-linux-gnueabi/include
+	cp -rf include/asm-generic $(TOOL)/powerpc-v42-linux-gnueabi/include
+	cp -rfL arch/powerpc/include/asm $(TOOL)/powerpc-v42-linux-gnueabi/include
+	cp -rf $(OBJ)/build_ppc_cp15431/include/linux/* $(TOOL)/powerpc-v42-linux-gnueabi/include/linux
+	cp -rf $(OBJ)/build_ppc_cp15431/include/asm/* $(TOOL)/powerpc-v42-linux-gnueabi/include/asm
+
+
+# powerpc scalance w old board 8 MB Flash
+linux_menuconfig_ppc_scalance_w_old:
+	make O=$(OBJ)/build_ppc_sc_w_old CROSS_COMPILE=ppc-v42- ARCH=powerpc menuconfig
+
+linux_config_ppc_scalance_w_old:
+	mkdir -p $(OBJ)/build_ppc_sc_w_old
+	rm -rf  $(OBJ)/build_ppc_sc_w_old/*
+	make O=$(OBJ)/build_ppc_sc_w_old CROSS_COMPILE=ppc-v42- ARCH=powerpc scalance_w_old_defconfig
+
+linux_build_ppc_scalance_w_old:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_ppc_sc_w_old CROSS_COMPILE=ppc-v42- ARCH=powerpc -j $(CORES)
+else
+	make O=$(OBJ)/build_ppc_sc_w_old CROSS_COMPILE=ppc-v42- ARCH=powerpc
+endif 
+
+
+# powerpc scalance w product hardware
+linux_menuconfig_ppc_scalance_w:
+	make O=$(OBJ)/build_ppc_sc_w CROSS_COMPILE=ppc-v42- ARCH=powerpc menuconfig
+
+linux_config_ppc_scalance_w:
+	mkdir -p $(OBJ)/build_ppc_sc_w
+	rm -rf  $(OBJ)/build_ppc_sc_w/*
+	make O=$(OBJ)/build_ppc_sc_w CROSS_COMPILE=ppc-v42- ARCH=powerpc scalance_w_defconfig
+
+linux_build_ppc_scalance_w:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_ppc_sc_w CROSS_COMPILE=ppc-v42- ARCH=powerpc -j $(CORES)
+else
+	make O=$(OBJ)/build_ppc_sc_w CROSS_COMPILE=ppc-v42- ARCH=powerpc
+endif 
+
+
+linux_image_ppc_scalance_w:
+	make O=$(OBJ)/build_ppc_sc_w CROSS_COMPILE=ppc-v42- ARCH=powerpc uImage
+
+
+# x86
+
+linux_menuconfig_x86_microbox:
+	make O=$(OBJ)/build_i586_microbox CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 menuconfig
+
+linux_config_x86_microbox:
+	mkdir -p $(OBJ)/build_i586_microbox
+	rm -rf  $(OBJ)/build_i586_microbox/*
+	make O=$(OBJ)/build_i586_microbox CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 microbox_defconfig
+
+linux_build_x86_microbox:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i586_microbox CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i586_microbox CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386
+endif 
+
+
+linux_install_x86_microbox:
+	cp -f $(OBJ)/build_i586_microbox/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i386_v42/rootfs/boot/vmlinux_microbox
+	cd $(ROOTFS_BASE)/build_i386_v42/rootfs/boot; ln -fs vmlinux_microbox vmlinux
+
+linux_copyhdr_x86:
+	mkdir -p $(TOOL)/i586-v42-linux/include
+	cp -rf include/linux $(TOOL)/i586-v42-linux/include
+	cp -rf include/asm-generic $(TOOL)/i586-v42-linux/include
+	cp -rfL arch/x86/include/asm $(TOOL)/i586-v42-linux/include
+	cp -rf $(OBJ)/build_i586_microbox/include/linux/* $(TOOL)/i586-v42-linux/include/linux
+	cp -rf $(OBJ)/build_i586_microbox/include/asm/* $(TOOL)/i586-v42-linux/include/asm
+
+
+linux_menuconfig_x86_embedded_ctrl_hr:
+	make O=$(OBJ)/build_i586_embedded_ctrl CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 menuconfig
+
+linux_config_x86_embedded_ctrl_hr:
+	mkdir -p $(OBJ)/build_i586_embedded_ctrl
+	rm -rf  $(OBJ)/build_i586_embedded_ctrl/*
+	make O=$(OBJ)/build_i586_embedded_ctrl CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 embedded_ctrl_hr_defconfig
+
+linux_build_x86_embedded_ctrl_hr:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i586_embedded_ctrl CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i586_embedded_ctrl CC=i586-v42-gcc AS=i586-v42-as LD=i586-v42-ld OBJCOPY=i586-v42-objcopy AR=i586-v42-ar ARCH=i386
+endif 
+
+
+linux_install_x86_embedded_ctrl_hr:
+	cp -f $(OBJ)/build_i586_embedded_ctrl/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i386_v42/rootfs/boot/vmlinux_embedded_ctrl
+	cd $(ROOTFS_BASE)/build_i386_v42/rootfs/boot; ln -fs vmlinux_embedded_ctrl vmlinux
+
+
+
+# x686
+
+linux_menuconfig_x686_microbox:
+	make O=$(OBJ)/build_i686_microbox CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_microbox:
+	mkdir -p $(OBJ)/build_i686_microbox
+	rm -rf  $(OBJ)/build_i686_microbox/*
+	make O=$(OBJ)/build_i686_microbox CC=i686-v42-gcc AS=i686-v42-as LD=i86-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 microbox_defconfig
+
+linux_build_x686_microbox:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_microbox CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_microbox CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif 
+
+
+linux_install_x686_microbox:
+	cp -f $(OBJ)/build_i686_microbox/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_microbox
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_microbox vmlinux
+
+
+linux_menuconfig_x686_embedded_ctrl_hr:
+	make O=$(OBJ)/build_i686_embedded_ctrl CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_embedded_ctrl_hr:
+	mkdir -p $(OBJ)/build_i686_embedded_ctrl
+	rm -rf  $(OBJ)/build_i686_embedded_ctrl/*
+	make O=$(OBJ)/build_i686_embedded_ctrl CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 embedded_ctrl_hr_defconfig
+
+linux_build_x686_embedded_ctrl_hr:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_embedded_ctrl CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_embedded_ctrl CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif
+
+
+linux_install_x686_embedded_ctrl_hr:
+	cp -f $(OBJ)/build_i686_embedded_ctrl/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_embedded_ctrl
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_embedded_ctrl vmlinux
+
+linux_menuconfig_x686_secle_audis:
+	make O=$(OBJ)/build_i686_secle_audis CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_secle_audis:
+	mkdir -p $(OBJ)/build_i686_secle_audis
+	rm -rf  $(OBJ)/build_i686_secle_audis/*
+	make O=$(OBJ)/build_i686_secle_audis CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386    x686_secle_audis_defconfig
+
+linux_build_x686_secle_audis:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_secle_audis CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_secle_audis CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif
+
+
+linux_install_x686_secle_audis:
+	cp -f $(OBJ)/build_i686_secle_audis/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_secle_audis
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_secle_audis vmlinux
+
+linux_menuconfig_x686_tdcboard:
+	make O=$(OBJ)/build_i686_tdcboard CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_tdcboard:
+	mkdir -p $(OBJ)/build_i686_tdcboard
+	rm -rf  $(OBJ)/build_i686_tdcboard/*
+	make O=$(OBJ)/build_i686_tdcboard CC=i686-v42-gcc AS=i686-v42-as LD=i86-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 tdcboard_defconfig
+
+linux_build_x686_tdcboard:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_tdcboard CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_tdcboard CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif
+
+
+linux_install_x686_tdcboard:
+	cp -f $(OBJ)/build_i686_tdcboard/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_tdcboard
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_tdcboard vmlinux
+
+linux_copyhdr_x686:
+	mkdir -p $(TOOL)/i686-v42-linux/include
+	cp -rf include/linux $(TOOL)/i686-v42-linux/include
+	cp -rf include/asm-generic $(TOOL)/i686-v42-linux/include
+	cp -rfL arch/x86/include/asm $(TOOL)/i686-v42-linux/include
+	cp -rf $(OBJ)/build_i686_embedded_ctrl/include/linux/* $(TOOL)/i686-v42-linux/include/linux
+	cp -rf $(OBJ)/build_i686_embedded_ctrl/include/asm/* $(TOOL)/i686-v42-linux/include/asm
+
+
+linux_menuconfig_x686_audis_pc:
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_audis_pc:
+	mkdir -p $(OBJ)/build_i686_audis_pc
+	rm -rf  $(OBJ)/build_i686_audis_pc/*
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 audis_pc_defconfig
+
+linux_build_x686_audis_pc:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif
+
+
+linux_build_x686_audis_pc_modules:
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 modules
+
+linux_install_x686_audis_pc:
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 install
+
+linux_install_x686_audis_pc_modules:
+	make O=$(OBJ)/build_i686_audis_pc CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 modules install
+
+
+#sinumerik d455
+linux_menuconfig_x686_sinumerik_d455:
+	make O=$(OBJ)/build_i686_sinumerik_d455 CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 menuconfig
+
+linux_config_x686_sinumerik_d455:
+	mkdir -p $(OBJ)/build_i686_sinumerik_d455
+	rm -rf  $(OBJ)/build_i686_sinumerik_d455/*
+	make O=$(OBJ)/build_i686_sinumerik_d455 CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 sinumerik_d455_defconfig
+
+linux_build_x686_sinumerik_d455:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_sinumerik_d455 CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_sinumerik_d455 CC=i686-v42-gcc AS=i686-v42-as LD=i686-v42-ld OBJCOPY=i686-v42-objcopy AR=i686-v42-ar ARCH=i386
+endif
+
+
+linux_install_x686_sinumerik_d455:
+	cp -f $(OBJ)/build_i686_sinumerik_d455/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_sinumerik_d455
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_sinumerik_d455 vmlinux
+
+#sinumerik end
+
+
+# nrk default configuration
+linux_menuconfig_x686_nrk:
+	make O=$(OBJ)/build_i686_nrk CROSS_COMPILE=i686-v42- ARCH=i386 menuconfig
+
+linux_config_x686_nrk:
+	mkdir -p $(OBJ)/build_i686_nrk
+	rm -rf  $(OBJ)/build_i686_nrk/*
+	make O=$(OBJ)/build_i686_nrk CROSS_COMPILE=i686-v42- ARCH=i386 nrk_defconfig
+
+linux_build_x686_nrk:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_i686_nrk CROSS_COMPILE=i686-v42- ARCH=i386 -j $(CORES)
+else
+	make O=$(OBJ)/build_i686_nrk CROSS_COMPILE=i686-v42- ARCH=i386
+endif
+
+
+linux_install_x686_nrk:
+	cp -f $(OBJ)/build_i686_nrk/arch/x86/boot/bzImage $(ROOTFS_BASE)/build_i686_v42/rootfs/boot/vmlinux_nrk
+	cd $(ROOTFS_BASE)/build_i686_v42/rootfs/boot; ln -fs vmlinux_nrk vmlinux
+
+
+
+# MIPS Broadcom Switch BCM953114R24GS (ATS 1 3)
+
+linux_menuconfig_mips_bcm5331:
+	make O=$(OBJ)/build_mips_bcm5331 CC=mips-v42eb-gcc AS=mips-v42eb-as LD=mips-v42eb-ld OBJCOPY=mips-v42eb-objcopy AR=mips-v42eb-ar ARCH=mips menuconfig
+        
+linux_config_mips_bcm5331:
+	mkdir -p $(OBJ)/build_mips_bcm5331
+	rm -rf  $(OBJ)/build_mips_bcm5331/*
+	make O=$(OBJ)/build_mips_bcm5331 CC=mips-v42eb-gcc AS=mips-v42eb-as LD=mips-v42eb-ld OBJCOPY=mips-v42eb-objcopy AR=mips-v42eb-ar ARCH=mips bcm53xx_defconfig
+
+linux_build_mips_bcm5331:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_bcm5331 CC=mips-v42eb-gcc AS=mips-v42eb-as LD=mips-v42eb-ld OBJCOPY=mips-v42eb-objcopy AR=mips-v42eb-ar ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_bcm5331 CC=mips-v42eb-gcc AS=mips-v42eb-as LD=mips-v42eb-ld OBJCOPY=mips-v42eb-objcopy AR=mips-v42eb-ar ARCH=mips
+endif
+
+
+linux_copyhdr_mips_bcm5331:
+	mkdir -p $(TOOL)/mips-v42eb-linux/include
+	cp -rf include/linux $(TOOL)/mips-v42eb-linux/include
+	cp -rf include/asm-generic $(TOOL)/mips-v42eb-linux/include
+	cp -rfL arch/mips/include/asm $(TOOL)/mips-v42eb-linux/include
+	cp -rf $(OBJ)/build_mips_bcm5331/include/linux/* $(TOOL)/mips-v42eb-linux/include/linux
+	cp -rf $(OBJ)/build_mips_bcm5331/include/asm/* $(TOOL)/mips-v42eb-linux/include/asm
+
+
+
+# MIPS SOC1 CP1500
+
+linux_menuconfig_mips_cp1500:
+	make O=$(OBJ)/build_mips_cp1500 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips menuconfig
+        
+linux_config_mips_cp1500:
+	mkdir -p $(OBJ)/build_mips_cp1500
+	rm -rf  $(OBJ)/build_mips_cp1500/*
+	make O=$(OBJ)/build_mips_cp1500 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips cp1500_defconfig
+
+linux_build_mips_cp1500:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_cp1500 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_cp1500 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips
+endif
+
+
+linux_image_mips_cp1500:
+	mips-v42-objcopy -O binary $(OBJ)/build_mips_cp1500/vmlinux $(OBJ)/build_mips_cp1500/vmlinux.bin
+	rm -f MakeAudisImageMipsWorking
+	cp MakeAudisImageMips MakeAudisImageMipsWorking
+	chmod uga+x MakeAudisImageMipsWorking
+	./MakeAudisImageMipsWorking $(OBJ)/build_mips_cp1500
+	rm -f MakeAudisImageMipsWorking
+
+linux_copyhdr_mips_cp1500:
+	mkdir -p $(TOOL)/mips-v42-linux/include
+	cp -rf include/linux $(TOOL)/mips-v42-linux/include
+	cp -rf include/asm-generic $(TOOL)/mips-v42-linux/include
+	cp -rfL arch/mips/include/asm $(TOOL)/mips-v42-linux/include
+	cp -rf $(OBJ)/build_mips_cp1500/include/linux/* $(TOOL)/mips-v42-linux/include/linux
+	cp -rf $(OBJ)/build_mips_cp1500/include/asm/* $(TOOL)/mips-v42-linux/include/asm
+
+
+
+# MIPS SOC1 CP342-5
+
+linux_menuconfig_mips_cp342:
+	make O=$(OBJ)/build_mips_cp342 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips menuconfig
+        
+linux_config_mips_cp342:
+	mkdir -p $(OBJ)/build_mips_cp342
+	rm -rf  $(OBJ)/build_mips_cp342/*
+	make O=$(OBJ)/build_mips_cp342 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips cp342_5_defconfig
+
+linux_build_mips_cp342:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_cp342 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_cp342 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips
+endif
+
+
+linux_image_mips_cp342:
+	mips-v42-objcopy -O binary $(OBJ)/build_mips_cp342/vmlinux $(OBJ)/build_mips_cp342/vmlinux.bin
+	rm -f MakeAudisImageMipsWorking
+	cp MakeAudisImageMips MakeAudisImageMipsWorking
+	chmod uga+x MakeAudisImageMipsWorking
+	./MakeAudisImageMipsWorking $(OBJ)/build_mips_cp342
+	rm -f MakeAudisImageMipsWorking
+
+
+# MIPS SOC1 CP443-5
+
+linux_menuconfig_mips_cp443:
+	make O=$(OBJ)/build_mips_cp443 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips menuconfig
+        
+linux_config_mips_cp443:
+	mkdir -p $(OBJ)/build_mips_cp443
+	rm -rf  $(OBJ)/build_mips_cp443/*
+	make O=$(OBJ)/build_mips_cp443 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips cp443_5_defconfig
+
+linux_build_mips_cp443:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_cp443 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_cp443 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips
+endif
+
+
+linux_image_mips_cp443:
+	mips-v42-objcopy -O binary $(OBJ)/build_mips_cp443/vmlinux $(OBJ)/build_mips_cp443/vmlinux.bin
+	rm -f MakeAudisImageMipsWorking
+	cp MakeAudisImageMips MakeAudisImageMipsWorking
+	chmod uga+x MakeAudisImageMipsWorking
+	./MakeAudisImageMipsWorking $(OBJ)/build_mips_cp443
+	rm -f MakeAudisImageMipsWorking
+
+
+# MIPS SOC1 CP1626
+
+linux_menuconfig_mips_cp1626:
+	make O=$(OBJ)/build_mips_cp1626 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips menuconfig
+        
+linux_config_mips_cp1626:
+	mkdir -p $(OBJ)/build_mips_cp1626
+	rm -rf  $(OBJ)/build_mips_cp1626/*
+	make O=$(OBJ)/build_mips_cp1626 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips cp1626_defconfig
+
+linux_config_mips_cp1626_uedd:
+	mkdir -p $(OBJ)/build_mips_cp1626
+	rm -rf  $(OBJ)/build_mips_cp1626/*
+	make O=$(OBJ)/build_mips_cp1626 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips cp1626_uedd_defconfig
+
+linux_build_mips_cp1626:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_cp1626 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_cp1626 CC=mips-v42-gcc AS=mips-v42-as LD=mips-v42-ld OBJCOPY=mips-v42-objcopy AR=mips-v42-ar ARCH=mips
+endif 
+
+
+linux_image_mips_cp1626:
+	mips-v42-objcopy -O binary $(OBJ)/build_mips_cp1626/vmlinux $(OBJ)/build_mips_cp1626/vmlinux.bin
+	rm -f MakeAudisImageMipsWorking
+	cp MakeAudisImageMips MakeAudisImageMipsWorking
+	chmod uga+x MakeAudisImageMipsWorking
+	./MakeAudisImageMipsWorking $(OBJ)/build_mips_cp1626
+	rm -f MakeAudisImageMipsWorking
+
+
+# MIPS EB
+
+linux_menuconfig_mips_eb:
+	make O=$(OBJ)/build_mips_eb CROSS_COMPILE=mips-v42eb- ARCH=mips menuconfig
+        
+linux_config_mips_eb:
+	mkdir -p $(OBJ)/build_mips_eb
+	rm -rf  $(OBJ)/build_mips_eb/*
+	make O=$(OBJ)/build_mips_eb CROSS_COMPILE=mips-v42eb- ARCH=mips cpeb_defconfig
+
+linux_build_mips_eb:
+ifdef CORES
+	@echo multicore-build with $(CORES) cores
+	make O=$(OBJ)/build_mips_eb CROSS_COMPILE=mips-v42eb- ARCH=mips -j $(CORES)
+else
+	make O=$(OBJ)/build_mips_eb CROSS_COMPILE=mips-v42eb- ARCH=mips
+endif 
+
+
+linux_image_mips_eb:
+	mips-v42eb-objcopy -O binary $(OBJ)/build_mips_eb/vmlinux $(OBJ)/build_mips_eb/vmlinux.bin
+	rm -f MakeAudisImageMipsWorking
+	cp MakeAudisImageMips MakeAudisImageMipsWorking
+	chmod uga+x MakeAudisImageMipsWorking
+	./MakeAudisImageMipsWorking $(OBJ)/build_mips_eb
+	rm -f MakeAudisImageMipsWorking
+
+linux_copyhdr_mips_eb:
+	mkdir -p $(TOOL)/mips-v42eb-linux/include
+	cp -rf include/linux $(TOOL)/mips-v42eb-linux/include
+	cp -rf include/asm-generic $(TOOL)/mips-v42eb-linux/include
+	cp -rfL arch/mips/include/asm $(TOOL)/mips-v42eb-linux/include
+	cp -rf $(OBJ)/build_mips_eb/include/linux/* $(TOOL)/mips-v42eb-linux/include/linux
+	cp -rf $(OBJ)/build_mips_eb/include/asm/* $(TOOL)/mips-v42eb-linux/include/asm
+
+

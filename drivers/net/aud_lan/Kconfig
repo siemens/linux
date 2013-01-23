@@ -1,0 +1,41 @@
+#
+# SOC LAN controller support
+# h.b. Siemens AG Industry Sector IA ATS 11 14-August-2008
+# m.n. overtaken for kernel 2.6.31.12
+#
+
+config AUD_SOC_LAN
+	bool "AuD SOC LAN support"
+	depends on NET_ETHERNET && MIPS && ( AUD_SOC1 || AUD_SOC2)
+	select MII
+	---help---
+	  This option enables driver support for the SOC
+	  embedded network controller.
+
+	  If you have such a controller, say Y 
+
+if  AUD_SOC_LAN
+
+choice
+	prompt "AUD SOC LAN SUPPORT"
+
+config MIPS_ETHER_SOC
+	bool "MIPS SOC simple LAN support"
+	depends on MIPS && ( AUD_SOC1 || AUD_SOC2)
+	help
+ 	  This option enables a simple non-rt driver support
+          for the SOC1 embedded network controller.
+          Herbert.Bernecker@siemens.com
+
+config MIPS_ETHY_SOC
+	bool "MIPS SOC LAN base driver"
+	depends on MIPS && ( AUD_SOC1 || AUD_SOC2)
+	help
+ 	  Enable a small kernel driver for the user space edd (ethernet device driver)
+          Herbert.Bernecker@siemens.com
+
+endchoice
+
+endif
+
+

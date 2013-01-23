@@ -1,0 +1,34 @@
+Targeting for the Audis-Linux-Kernel
+After searching and renaming the filenames in the kernel-sources for a non-case-sensitive filesystem,
+following files must be changed in their contents:
+
+/audis_dev/src/pkgs/linux/net/ipv4/netfilter/Makefile
+
+/audis_dev/src/pkgs/linux/net/ipv4/netfilter/ipt_ecn_2.c
+
+/audis_dev/src/pkgs/linux/include/linux/netfilter_ipv4/ipt_ecn_2.h
+
+/audis_dev/src/pkgs/linux/include/linux/netfilter_ipv4/ipt_dscp_2.h (2 Changes)
+
+/audis_dev/src/pkgs/linux/net/netfilter/Makefile (5 Changes)
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_connmark_2.c
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_dscp_2.c
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_hl_2.c
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_mark_2.c
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_rateest_2.c
+
+/audis_dev/src/pkgs/linux/net/netfilter/xt_tcpmss_2.c
+
+
+
+
+
+
+
+
+

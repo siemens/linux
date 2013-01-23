@@ -1,0 +1,130 @@
+config RTX_DYNAMIC_MAJOR_NUMBER
+	bool "Create dynamic major number for the Audis device node"
+	depends on RTX_DOMAIN
+	default y
+	---help---
+	  If this option is enabled the system allocates a major number
+	  for the Audis device node "/dev/audis" dynamically.
+
+config RTX_STATIC_MAJOR_NUMBER
+	int "Static major number of Audis device node (200 - 240)"
+	depends on RTX_DOMAIN && !RTX_DYNAMIC_MAJOR_NUMBER
+	range 200 240
+	default 220
+	---help---
+	  This option helps to pre-define a static major number for the
+	  Audis device node "/dev/audis" in the range between 200..240.
+
+config RTX_DOMAIN_INTEGRITY_CHECK
+	bool "System integrity check"
+	depends on RTX_DOMAIN
+	default n
+	---help---
+	  This option helps to verify the correct invocation context. 
+	  On entry of critical Linux services a panic situation
+	  may occur if the caller is not running over the Linux domain.
+
+config RTX_OPTIMIZE_FOR_RELEASE
+	bool "Code optimizations"
+	depends on RTX_DOMAIN
+	default y
+	--help---
+	  If this option is disabled additional code is activated to 
+	  print out extra messages for signal/event/futex handling. The delivery
+	  of signals/events will be delayed. Thus, this option should only be used
+	  for test purposes. This option also depends on RT_SIGNAL_VERBOSE,
+	  RT_EVENT_VERBOSE and RT_FUTEX_VERBOSE (see linux/aud/rt_base.h).
+	
+config RTX_DOMAIN_STOP_ON_PANIC
+	bool "RT-domain stopping on Linux panic"
+	depends on RTX_DOMAIN
+	default n
+	--help---
+	  If this option is disabled and the Linux domain crashes, the RT-domain 
+	  does not stop working. Otherwise, if this option is enabled and the Linux 
+	  domain crashes the RT-domain is never invoked again.
+
+config RTX_SCHED_RR_TIMESLICE_US
+	int "Round robin scheduling timeslice (usecs)"
+	default 10000
+	depends on RTX_DOMAIN
+	--help---
+	  This value defines the timeslice (microseconds) for round robin threads.
+
+config RTX_THREAD_GROUP_SUPPORT
+	bool "Realtime thread group support"
+	depends on RTX_DOMAIN && RTX_DOMAIN_HRT
+	default n
+	--help---
+	  If this option is enabled, realtime thread groups are supported
+	  according to the A&D-API.
+
+if RTX_THREAD_GROUP_SUPPORT
+
+config RTX_MAX_THREAD_GROUPS
+	int "Maximum number of thread groups"
+	default 5
+	--help---
+	  This value defines the maximum number of thread groups supported.
+
+config RTX_THREAD_GROUP_INTERVAL_US
+	int "Thread group interval (usecs)"
+	default 1000
+	--help---
+	  The thread group interval (microseconds) defines the time span
+	  for the thread group quota handling. At the start of the interval
+	  a new quota is assigned to all thread groups.
+	  Note: When using round robin threads (scheduling policy SCHED_RR)
+	  in thread groups, the scheduling timeslice (see RTX_SCHED_RR_TIMESLICE_US)
+	  should only be a fraction of the thread group interval.
+
+endif
+
+config RTX_DISABLE_WRITE_DAEMON
+	bool "Disable write daemon"
+	depends on RTX_DOMAIN
+	default n
+	--help---
+	  If this option is enabled RT-printf's to stdout/stderr will be delegated
+	  to the LX-domain. This option should only be enabled for test purposes,
+	  otherwise realtime behaviour may be corrupted.
+
+config RTX_DOMAIN_EXCLUSIVE_MODE
+	bool "RT-domain exclusive mode"
+	depends on RTX_DOMAIN && SMP && X86
+	default n
+	--help---
+	  If this option is enabled the core on which the realtime process
+	  is running forces all other processor cores to run in an idle loop
+	  while the RT-domain is active.
+	  Note: This mode allows only one realtime process to be running.
+
+config RTX_THREAD_RUNTIME
+	bool "Runtime accounting for RT-threads"
+	depends on RTX_DOMAIN && RTX_DOMAIN_HRT
+	default y
+	--help---
+	  If this option is enabled the runtime of RT-threads is accounted.
+	  Note: The amount of time a thread has been in running state also
+	  implicates the amount of time the thread has been interrupted.
+
+config RTX_RETURN_TO_LINUX
+	def_bool n
+	depends on RTX_DOMAIN && X86
+	prompt "Support for audis_return_to_linux() functionality"
+	---help---
+	  Include support for audis_return_to_linux(). Voluntarily give up the 
+	  RT-domain and return to Linux.
+
+config RTX_PRINT_BUF_LEN_KB
+	int "Size of the print buffer (KB)"
+	default 16
+	depends on RTX_DOMAIN
+	--help---
+	  This value defines the size of the print buffer in KB. All the messages
+	  written from RT-threads of a RT application to stdout/stderr are cumulated
+	  in the print buffer. A Linux write daemon is responsible to really write
+	  these messages to stdout/stderr whenever there is no RT activity in the
+	  system.  
+	  This value can be overwritten dynamically by the boot parameter 
+	  "audis_print_buf_len=" which is also interpreted as a value in KB.

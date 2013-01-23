@@ -1,0 +1,305 @@
+
+Release notes for KW LSP release 4.2.7
+=======================================
+This release passed QA cycle on the following boards:
+	o DB-88F6281-BP-A
+	o RD-88F6281-A
+        o DB-88F6192-BP-A
+        o RD-88F6192-A
+        o DB-88F6180-BP-A
+
+
+Table of Contents
+-----------------
+
+1.	Contents of this Release
+2. 	HowTo build
+3.	Changes from previous releases
+4.	Known Issues
+5.      Notes
+6.      Disclaimer
+	
+
+1. Contents of This Release
+===========================
+
+	Included in current release :
+	- Support for ttyS0.
+	- Interrupts handling.
+	- L2 support + optimized cache opertaions.
+	- USB host and device support.
+	- CESA support.
+	- PCI and PEX support.
+	- Standard network interface support for the KW giga port.
+	- Gateway network interface support for the RD on board switch.
+	- Marvell SATA support.
+	- Audio Alsa driver.
+	- SD/SDIO/MMC driver.
+  	- Telephony driver.
+	- Nand flash driver.
+	- SPI flash driver.
+	- Memory transfer accelerations by using the XOR-DMA engine.
+        - RTC support.
+        - Support for passing Marvell Tag list from uboot.
+        - Kconfig scripts for KW platforms configuration.
+        - Heart Beat led.
+        - Reset support.
+        - MV shell Proc FS.
+
+	- This release is a patch to Linux 2.6.22.18 which can be download from
+          (www.kernel.org)
+
+	Configuration:
+	--------------
+	1. mv88f6281_defconfig
+	2. mv88f6281_gw_defconfig
+	3. mv88f6281_be_gw_defconfig
+	
+	     Supported boards:
+	-----------------
+	1. DB-88F6281-BP-A
+	2. DB-88F6192-BP-A (6190)
+	3. RD-88F6281-A
+	4. RD-88F6192-A (6190)
+	5. DB-88F6180-BP-A
+	
+2. HowTo build
+===============
+		This release was built using SDK 4.2.1
+		get linux-2.6.22.18 from ww.kernel.org
+		change its name to the release name (linux_feroceon_...).
+		unzip the release.zip in the directory where you put the kernel, say A to replace all.
+		cd to the kernel directory.
+		'make mrproper'
+		config the kernel:
+                'make <platform>_defconfig' 
+		'make uImage'
+		the kernel uImage will be found under arch/arm/boot/.
+
+3. Changes from previous releases
+=================================
+- Changes from release 4.2.6
+------------------------------
+ o Change the BE defconfig to include gw functionality.
+ o Fix bug on mux settings when using modules for DB6281 and DB6180.
+ o Remove USB VBUS and SDIO WP GPP declaration for DB6281 and DB6180 since it conflict modules MPP.
+
+- Changes from release 4.2.5
+------------------------------
+ o Board:
+   - Fix MPPs configuration
+
+- Changes from release 4.2.4
+------------------------------
+ o Network:
+   - Fix SKB reuse policy due to inconsistency between packet actual size and
+     packet size reported by IP stack
+   - Enable TX_EN only when possible, i.e.: link down or full duplex or speed is
+     not 10 Mbps
+ o Audio:
+   - Fix capture mode setup
+ o Board: 
+   - Fix MPPs toggling between SPI flash and NAND flash
+   - Update DB-88F6180-BP board structure parameters
+   - Configure unused MPPs to output mode
+ o TS:
+   - Update TS setup parameters in defconfig
+
+- Changes from release 4.2.3
+------------------------------
+ o Network:
+   - Update functionlist for improved network performance
+   - Export network RX & Tx number of descriptors to config file
+   - Change ethernet interfaces naming order: start with numbering to the 
+     interface/s not connected to switch and so on
+   - Support SNMP & Netfilter counters disable to improve network performance 
+   - Fix switch failed initialization phase sequence
+   - Disable built-in kernel driver for Yukon cards and use LSP driver instead.
+ o USB:
+   - Use new EHCI USB scheduler
+   - Fix several bugs found within kernel EHCI USB host stack
+ o Telephony:
+   - Fix interrupt enabling sequence
+   - Fix interrupt acknoledgement sequence
+   - Fix SLIC indirect register access polling mode
+ o TS:   
+   - Enable TS unit support for little-endian images only
+ o Board:
+   - Support boot from SPI followed by access to NAND
+   - Support new board DB-88F6180-BP-A
+   - Add new place holder for generic customer board
+ o RTC:
+   - Update LSP RTC driver to trigger the clock in case non valid date was assigned       
+
+- Changes from release 4.2.2
+------------------------------
+ o Support I2C_MV64XXX driver as module for RD-88F6192-A only
+ o Change API: mvBoardTdmLifeLineSet --> mvBoardTdmMppSet
+ o RD-88F6281-A: support 2 FXS or FXS + FXO configurations according to
+   U-Boot environment parameter `mvPhoneConfig`
+ o Audio: tune SPDIF & I2S support according to board configuration
+ o Fix PEX error when no link is detected 
+ o Network:
+    - Fix network problem happen during link up/down
+ o SDIO:
+    - Support kernel 2.6.26
+    - Fix driver spinlock usage
+    - Support auto command 12 response
+    - FIxed error handling
+    - Remove debug code
+    - Fix interrupt timeout handling
+    - code cleanup
+ o Align code with NetBSD support
+ o Enable DSP instructions support 
+ 
+
+ - Changes from release 4.2.1
+ -----------------------------
+ o Fix SDIO on DB6281.
+ o Add support for 6190.
+
+ - Changes from release 4.2.0
+ -----------------------------
+ o Support HDD and Fan power control through IOexpender.
+ o SUpport only FXS-FXS mode.
+ o Reset FXS through IOexpender.
+ o SUpport Switch link change through interrupt.
+
+ - Changes from release 4.1.6
+ -----------------------------
+ o Support KW SoC step A0
+ o Remove KW SOC step Z0 support
+ o Merge Gateway & Ethernet driveres
+ o Add the following network features:
+    - Multi queue support
+    - Support simultaneously in GbE port and 6065 switch on RD-6281-A
+    - NFP NAT only for TCP packets
+ o Support new CPU core features: BTB, L2 ECC   
+ o Remove SW workaround for BIU reordering issue
+ o Add new API for reset period counter
+ 
+ - Changes from release 4.1.5
+ -----------------------------
+ o Disable AHBErrorProp bit in cpu interface.
+ o Update SATA PHY register values.
+
+ - Changes from release 4.1.4
+ -----------------------------
+ o Support big-endian Linux kernel image.
+ o Fix several big-endian releated bugs:
+   - mv_gateway: fix read/write MII routines.
+   - mv_voip_tool: swap sw tone data, in case running on big-endian kernel.
+   - mv_voip_tool: fix minor bug in FXS --> FXO test.
+ o Enable AHBErrorProp bit in cpu interface.
+ o mv_xor: move endianess handling from OS glue code to xor HAL driver.   
+
+4. Known Issues
+===============
+- Linux kernel panic happens from time to time during boot phase due to initialization
+  failure of Marvell switch 6165.
+
+- USB VBUS and SDIO WP is not operational on the foolowing boards since it conflict MPP 
+  settings for add-on modules: 
+  o DB-88F6281-BP: SDIO and USB device
+  o DB-88F6180-BP: USB device
+
+- Kernel panic occurs when using NFP and adding a NAT rule (using iptables) 
+  to an illegal network interface.
+
+- Configuration of invalid MTU values in the UBoot mvNetConfig parameter 
+  (RD-6281), are passed to Linux without validity check or rounding.
+    
+- Egiga interface up/down when NFP is enable might generate status messages:
+  "Interrupt while in polling list".
+     
+- NFP routing with SATA stress running at CPU frequency of 800MHz,
+  generate overrun error: " bad rx status 2fc3a86b, (overrun error)".
+
+- OpenSSL speed test multiple sessions cause to board terminal ,telnet and ssh 
+  sessions to stop working. 
+ 
+- Maxtor HD does not initializes after 3-4 connects/disconnects to PM on board.
+  It happens on RD-88F6192-NAS with ports # 1,2,3. 
+  The same test on port #0 - pass.
+
+- NFP doesn't support packets with MTU bigger than 1500 Bytes.
+
+- Timeout errors of commands for ATAPI devices can cause to the device to be
+  set in offline mode, this issue will be fixed in future releases.
+
+- When disconnecting a SATA device while it used by the kernel (e.g. contains
+  unmounted file system), the user must delete the block devices on that 
+  channel (using the sysfs), otherwise, farther hotswap events on that channel
+  may cause to kernel crash.
+
+  In order to overcome this issue, 
+  We recommend that the user will cleanly remove the scsi dev through the sysfs by using the 
+  following command:
+  #echo 1 > /sys/class/scsi_host/hostH/device/targetH:B:T/H:B:T:L/delete
+  Where H, B, T and L stands for Host, Bus, Target and Lun.
+
+  In case that the disk was removed brutally, the udev should detect this event and should remove 
+  the device from the sysfs by using the same command as above.
+
+- Thor with PM doesn't work well.
+
+5. Notes
+========
+
+- In kernel 2.6.22 the performance on EXT3 is very sensitive to the journaling mode,
+  in order to achieve the best performance please use data=writeback.
+
+- This release support up to 512MB of DRAM with current memory layout definition.
+
+5. Disclaimer
+=============
+This document provides preliminary information about the products described, and such 
+information should not be used for purpose of final design. Visit the Marvell(r) web 
+site at www.marvell.com for the latest information on Marvell products.
+
+No part of this document may be reproduced or transmitted in any form or by any means, 
+electronic or mechanical, including photocopying and recording, for any purpose, 
+without the express written permission of Marvell. Marvell retains the right to make 
+changes to this document at any time, without notice. Marvell makes no warranty of 
+any kind, expressed or implied, with regard to any information contained in this 
+document, including, but not limited to, the implied warranties of merchantability 
+or fitness for any particular purpose. Further, Marvell does not warrant the accuracy 
+or completeness of the information, text, graphics, or other items contained within 
+this document. Marvell makes no commitment either to update or to keep current the 
+information contained in this document. Marvell products are not designed for use in 
+life-support equipment or applications that would cause a life-threatening situation 
+if any such products failed. Do not use Marvell products in these types of equipment 
+or applications. The user should contact Marvell to obtain the latest specifications 
+before finalizing a product design. Marvell assumes no responsibility, either for use 
+of these products or for any infringements of patents and trademarks, or other rights 
+of third parties resulting from its use. No license is granted under any patents, 
+patent rights, or trademarks of Marvell.These products may include one or more 
+optional functions. The user has the choice of implementing any particular optional 
+function. Should the user choose to implement any of these optional functions, it is 
+possible that the use could be subject to third party intellectual property rights. 
+Marvell recommends that the user investigate whether third party intellectual property 
+rights are relevant to the intended use of these products and obtain licenses as 
+appropriate under relevant intellectual property rights. 
+Marvell comprises Marvell Technology Group Ltd. (MTGL) and its subsidiaries, Marvell 
+International Ltd. (MIL), Marvell Semiconductor, Inc. (MSI), Marvell Asia Pte Ltd. (MAPL), 
+Marvell Japan K.K. (MJKK), Marvell Semiconductor Israel Ltd. (MSIL), SysKonnect GmbH, 
+and Radlan Computer Communications, Ltd.
+Export Controls.  With respect to any of Marvell's Information, the user or recipient, 
+in the absence of appropriate U.S. government authorization, agrees: 1) not to re-export 
+or release any such information consisting of technology, software or source code 
+controlled for national security reasons by the U.S. Export Control Regulations ("EAR"), 
+to a national of EAR Country Groups D:1 or E:2; 2) not to export the direct product of 
+such technology or such software, to EAR Country Groups D:1 or E:2, if such technology or 
+software and direct products thereof are controlled for national security reasons by the 
+EAR; and, 3) in the case of technology controlled for national security reasons under the 
+EAR where the direct product of the technology is a complete plant or component of a plant, 
+not to export to EAR Country Groups D:1 or E:2 the direct product of the plant or major 
+component thereof, if such direct product is controlled for national security reasons by 
+the EAR, or is subject to controls under the U.S. Munitions List  ("USML").  At all times 
+hereunder, the recipient of any such information agrees that they shall be deemed to have 
+manually signed this document in connection with their receipt of any such information. 
+Copyright (c) 2004.  Marvell.  All rights reserved.  Marvell, the Marvell logo, Moving 
+Forward Faster, Alaska, and GalNet are registered trademarks of Marvell.  Discovery, 
+Fastwriter, GalTis, Horizon, Libertas, Link Street, NetGX, PHY Advantage, Prestera, 
+Raising The Technology Bar, UniMAC, Virtual Cable Tester, and Yukon are trademarks of 
+Marvell.  All other trademarks are the property of their respective owners.

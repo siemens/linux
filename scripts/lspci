@@ -1,0 +1,32 @@
+#!/bin/sh
+
+#
+## xcat lspci command. working on console only !!
+#
+
+
+file=/proc/bus/pci/devices
+
+irq=0x`cat $file  | cut -f3`
+#irq=`printf "%d\n" $irq`
+
+vendor_device=`cat $file  | cut -f2`
+bar0=`cat $file  | cut -f4 | sed -e 's/0c/00/'`
+bar2=`cat $file  | cut -f6 | sed -e 's/0c/00/'`
+
+echo
+echo vendor_device=$vendor_device
+echo irq=$irq
+echo bar0=$bar0
+echo bar2=$bar2
+echo
+
+cat /proc/bus/pci/01/01.0  | hexdump   | head -4
+
+endianess=`cat /proc/endianess`
+
+echo
+echo "$endianess cpu"
+
+echo
+

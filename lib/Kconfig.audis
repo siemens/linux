@@ -1,0 +1,126 @@
+config AUD_EXCEPTION_HOOK
+        bool "Hook for a system exception handler"
+        help
+          This option will provide a pointer to a system exception
+          handler which is initially set to NULL. This pointer may
+          be initialized by a driver (see include/asm-generic/bug.h).
+
+          When a problem is detected which causes the system to stop
+          running (e.g. panic(), die()) this exception handler will
+          be called to do some work before the system halts.
+
+config ALLOW_POSIX_TIMER_OVERRUN
+	bool "Allow Posix Timer overrun"
+	default y
+	help
+	  Standard Linux restarts posix timers only when the waiting thread
+	  dequeues the corresponding signal.
+	  This option enables an immediate restart of posix timers when expired.
+	  With this option a starved thread can recognize its late scheduling
+	  by reading the overrun counter of its timer.
+
+config AUD_PTRACE
+	bool "Special debug handling"
+	default y
+	help
+	  This option allows to attach all threads of a process
+          immediately.
+
+config RTX_EXTENDED_RT_DEBUGGING_SUPPORT
+	bool "extended realtime debugging"
+	default n
+	help
+	  This option allows an extended debugging
+          of realtime threads with an immediate stop of
+          all realtime threads when a breakpoint is hit.
+
+config RTX_RT_WATCHDOG_SUPPORT
+	bool "watchdog interface for realtime threads"
+	default n
+       depends on RTX_EXTENDED_RT_DEBUGGING_SUPPORT
+	help
+	  This option provides an interface for a user watchdog 
+          thread to stop all running realtime threads.
+
+config AUD_SPIN_LOCK_WORKAROUND
+	bool "workaround to support user level spinlock"
+	default y
+       depends on PPC || ARM || MIPS
+	help
+	  user level spinlock with threads of static priority
+	  need to block interrupts / scheduling.
+	  this selection provides a workaround to do this.
+	  for more information manfred.neugebauer@siemens.com
+
+config AUD_FAST_SPIN_LOCK_WORKAROUND
+	depends on AUD_SPIN_LOCK_WORKAROUND
+	bool "workaround to support fast user level spinlock"
+	default n
+	help
+	  user level spinlock with threads of static priority
+	  need to block interrupts / scheduling.
+	  this selection provides a fast user method for this.
+	  for more information manfred.neugebauer@siemens.com
+
+config AUD_EXTEND_COMMAND_LINE
+	int "extend command line storage"
+	range 256 2048
+	default 256
+	help
+	  extend command line string storage for additional
+	  kernel startup arguments
+
+config AUD_LOW_LEVEL_PRINTK
+	bool "Support direct printk"
+	help
+	  enables an immediate output of kernel messages
+	  during Linux startup.
+
+config AUD_FORCE_CR_FOR_KERNEL_PRINTK
+	bool "add cr for kernel printk"
+	help
+	  some architectures require an additional cr
+	  while using printk kernel messages
+
+config AUD_LOW_LEVEL_KERNEL_DUMP
+	bool "Support low level kernel dump messages"
+	help
+	  enables direct output of special kernel messages
+
+config AUD_DISABLE_WDT_AUTOMODE
+	bool "disable watchdog automode trigger"
+	depends on 8xxx_WDT
+	help
+	  disable watchdog timer auto triggering for 8xxx watchdogs
+	  (currently used with Siemens cp15432)
+
+config AUD_FW_DEBUG_MODE_DRIVER
+	bool "Audis firmware debug mode driver"
+	default n
+	help
+	  activate a audis specific firmware debug mode driver
+	  to modify console level of kernel printk
+
+config USER_STACKSIZE_LIMIT_FOR_EMBEDDED
+	bool "limit user stacksize"
+	default n
+	---help---
+	  small systems using glibc may have problems with the default kernel
+	  stacksize. This option
+	  sets a smaller limit for standard and max user stacksize
+config USER_STACKSIZE_RLIM_CUR	  
+	hex "set rlim_cur for user stacksize"
+	default 0x20000
+	depends on USER_STACKSIZE_LIMIT_FOR_EMBEDDED
+	---help---
+	  You may need to activate this option 
+	  to limit the stacksize for glibc based user applications
+	  (This number is used when you create threads without attributes)
+config USER_STACKSIZE_RLIM_MAX	  
+	hex "set rlim_max for user stacksize"
+	default 0x100000
+	depends on USER_STACKSIZE_LIMIT_FOR_EMBEDDED
+	---help---
+	  You may need to activate this option 
+	  to limit the maximum stacksize for glibc based user applications
+

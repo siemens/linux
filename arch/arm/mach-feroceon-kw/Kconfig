@@ -1,0 +1,47 @@
+if ARCH_FEROCEON_KW
+
+choice
+	prompt "Feroceon-KW SoC type"
+	default MV88F6281
+
+config  MV88F6281
+	bool "88F6281/88F6192/88F6190/88F6180/ SoC"
+	---help---
+	Choosing this option will generate a linux kernel for the 88F6281/88F6192/88F6190/88F6180 SoC
+
+
+config  MV98DX3121
+        bool "MV98DX3121 SoC"
+        ---help---
+        Choosing this option will generate a linux kernel for the  MV98DX3121 SoC
+
+config  MV98DX4122
+        bool "MV98DX4122 SoC"
+        ---help---
+        Choosing this option will generate a linux kernel for the  MV98DX4122 SoC
+
+config  X500PROTOTYPE
+        bool "X500 prototype"
+        ---help---
+        Choosing this option will generate a linux kernel for the  X500
+
+endchoice
+
+config  OVERRIDE_ETH_CMDLINE
+	bool "Override command line definitions for SoC Networking"
+	depends on MV88F6281 || MV98DX3121 || MV98DX4122 || X500PROTOTYPE
+
+	---help---
+	Choosing this option will override MAC address and MTU definition of kernel command line. 
+        The GbE driver will use the setting from kernel config
+
+config AUD_EXCEPTION_HOOK
+	bool "exception hook for CP useage"
+	default y
+	help
+	  Include support to provide a hook which is called when
+	  an exception for a user application occurs.
+	  (see Friedrich.Ensslin@siemens.com)
+
+endif
+

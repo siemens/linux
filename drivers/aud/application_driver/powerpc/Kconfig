@@ -1,0 +1,14 @@
+
+
+config AuD_PBUS_PLUS
+	tristate "ppc based driver for the pbus plus"
+	depends on MPC834x_MDS && PCI
+	default n
+	---help---
+	  This option enables the ppc driver
+	  for the pbus plus PCI interface.
+
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+
+	  more information <Manfred.Neugebauer@siemens.com>

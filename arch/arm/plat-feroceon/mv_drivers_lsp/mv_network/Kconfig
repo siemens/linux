@@ -1,0 +1,277 @@
+config  MV_ETHERNET
+        bool "Networking Support"
+	depends on MV_INCLUDE_GIG_ETH
+        ---help---
+        Choose this option to support Marvell Gigabit Ethernet Controller 
+
+config MV_ETH_PORTS_NUM
+	int "Number of Marvell Giga Ethernet controllers"
+	depends on MV_ETHERNET
+	default 0 
+
+if MV_ETHERNET
+
+menu "Network Interface Configuration"
+
+config  MV_ETH_0_MTU
+	int "Giga port #0 MTU value"
+	depends on (MV_ETH_PORTS_NUM != 0)
+ 	default 1500
+        ---help---
+	Default MTU value for Marvell Giga port #0
+
+config  MV_ETH_0_MACADDR
+        string "Giga port #0 MAC Address"
+        depends on (MV_ETH_PORTS_NUM != 0)
+        default "00:00:00:00:00:80"
+        ---help---
+        Default MAC address for Marvell Giga port #0 
+
+config  MV_ETH_1_MTU
+        int "Giga port #1 MTU value"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1)
+        default 1500
+        ---help---
+	Default MTU value for Marvell Giga port #1
+
+config  MV_ETH_1_MACADDR
+        string "Giga port #1 MAC Address"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1)
+        default "00:00:00:00:00:81"
+        ---help---
+        Default MAC address for Marvell Giga port #1
+
+config  MV_ETH_2_MTU
+        int "Giga port #2 MTU value"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1) && (MV_ETH_PORTS_NUM != 2)
+        default 1500
+        ---help---
+        Default MTU value for Marvell Giga port #2
+
+config  MV_ETH_2_MACADDR
+        string "Giga port #2 MAC Address"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1) && (MV_ETH_PORTS_NUM != 2)
+        default "00:00:00:00:00:82"
+        ---help---
+        Default MAC address for Marvell Giga port #2
+
+config  MV_ETH_3_MTU
+        int "Giga port #3 MTU value"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1) && (MV_ETH_PORTS_NUM != 2) && (MV_ETH_PORTS_NUM != 3)
+        default 1500
+        ---help---
+        Default MTU value for Marvell Giga port #3
+
+config  MV_ETH_3_MACADDR
+        string "Giga port #3 MAC Address"
+        depends on (MV_ETH_PORTS_NUM != 0) && (MV_ETH_PORTS_NUM != 1) && (MV_ETH_PORTS_NUM != 2) && (MV_ETH_PORTS_NUM != 3)
+        default "00:00:00:00:00:83"
+        ---help---
+        Default MAC address for Marvell Giga port #3
+
+endmenu
+endif
+
+if MV_ETHERNET
+menu "Rx/Tx Queue Configuration"
+
+config  MV_ETH_MULTI_Q
+        bool "Support for muliple queues"
+        default y
+        ---help---
+          Multiple queues support.
+
+config  MV_ETH_RX_Q_NUM
+        int
+        default 8 if MV_ETH_MULTI_Q
+        default 1 if !MV_ETH_MULTI_Q
+        ---help---
+          Number of RX queues.
+
+config  MV_ETH_TX_Q_NUM
+        int
+        default 8 if MV_ETH_MULTI_Q    
+        default 1 if !MV_ETH_MULTI_Q
+        ---help---
+          Number of TX queues.
+
+config MV_ETH_NUM_OF_RX_DESCR
+	int
+	depends on (MV_ETH_PORTS_NUM != 0)
+        default 64 if MV_ETH_MULTI_Q    
+        default 128 if !MV_ETH_MULTI_Q    
+        ---help---
+	The number of Rx descriptors in each Rx queue.
+
+config MV_ETH_NUM_OF_TX_DESCR
+	int
+	depends on (MV_ETH_PORTS_NUM != 0)
+        default 532 if MV_ETH_MULTI_Q    
+        default 148 if !MV_ETH_MULTI_Q    
+        ---help---
+	The number of Tx descriptors in each Tx queue.
+
+endmenu
+endif
+
+if MV_ETHERNET
+menu "TCP/UDP Offloading"
+
+config  MV_ETH_TSO
+        bool "TSO Support for Marvell network interface"
+	default y
+        ---help---
+        Adds TSO support for TCP segmentation offload on Marvell network interface.
+
+config  MV_ETH_UFO
+        bool "UFO Support for Marvell network interface"
+        ---help---
+        Adds UFO support for transmit UDP buffers larger than MTU size on 
+        Marvell network interface.
+        UFO stands for UDP Fragmentation Offload
+
+config  MV_ETH_LRO_UDP
+        bool "LRO UDP support for Marvell network interface"
+	depends on INET_LRO
+        ---help---
+        Adds LRO support for receiving large UDP datagrams on Marvell network interface.
+        LRO stands for Large Receive Offload
+
+endmenu
+endif
+
+if MV_ETHERNET
+menu "Control and Statistics"
+
+config  MV_ETH_PROC
+	bool "Support eth proc FS "
+	default y
+	---help---
+	  Use mv_eth_tool to control Marvell network interface driver.
+
+config  MV_ETH_STATS_ERROR
+        bool "Collect error statistics"
+	---help---
+	Marvell network interface driver collect minimal number of statistics. 
+	Only for error conditions. Can be displayed using mv_eth_tool.
+
+config  MV_ETH_STATS_INFO
+        bool "Collect event statistics"
+        ---help---
+	Marvell network interface driver collect event statistics. 
+	Provide more information about driver functionality and almost doesn't 
+	effect performance. Can be displayed using mv_eth_tool.
+
+config  MV_ETH_STATS_DEBUG
+        bool "Collect debug statistics"
+        ---help---
+	Marvell network interface driver collect a lot of statistics. 
+	Used for Debug mode. Decrease performance. Can be displayed using mv_eth_tool.
+
+config  MV_LINUX_COUNTERS_DISABLE
+	bool "Disable collection of SNMP statistics and Netfilter Contract statistics"
+	default n
+	---help---
+	Disable collection of SNMP statistics and Netfilter Contract statistics to improve performance.
+
+endmenu
+endif
+
+if (MV_ETHERNET)
+menu "Advanced Features"
+
+config  MV_ETH_TIMER_PERIOD
+        int "Periodical timer period"
+        default 10
+        ---help---
+          Periodical timer period for clenup in [msec].
+config  MV_SKB_HEADROOM
+        int "SKB headroom size"
+        default 16
+        ---help---
+          Customize SKB headroom size. Must be power of 2.
+
+config	MV_SKB_REUSE
+	bool "Try to reuse SKB"
+	default y
+	---help---
+	  Reuse SKB from TX to RX
+
+config  MV_ETH_NFP
+        bool "Use Network Fast Processing (NFP)"
+	default y
+        ---help---
+        Choosing this option will include NFP support in the image.
+
+config MV_ETH_NFP_AGING_TIMER
+        int "NFP aging timer interval"
+        depends on MV_ETH_NFP
+        default 15
+        ---help---
+        The NFP aging mechanism timer interval. If unsure, leave default value.
+
+config MV_ETH_NFP_NAT_SUPPORT
+        bool "Support NFP NAT"
+        depends on MV_ETH_NFP && NF_CONNTRACK_ENABLED
+        ---help---
+        Choosing this option will enable NFP NAT support.
+
+config MV_ETH_NFP_FDB_SUPPORT
+	bool "Support NFP Bridging"
+	depends on MV_ETH_NFP && BRIDGE
+	default n
+	 ---help---
+	Choosing this option will enable NFP Bridging.
+
+config  MV_NFP_STATS
+        bool "Collect NFP statistics"
+	depends on MV_ETH_NFP
+        default n
+        ---help---
+        Collect NFP statistics. Can be displayed using mv_eth_tool.
+
+endmenu
+endif
+
+config MV_GATEWAY
+        bool "Gateway support"
+	depends on MV_ETHERNET
+        ---help---
+	Choose this option to support Gigabit Ethernet Controller connected to 
+        on-board QuarterDeck switch family
+
+if MV_GATEWAY
+
+menu "Gateway Interface Configuration"
+
+config  MV_GTW_CONFIG
+	string "Network interface configuration"
+	default "(00:11:66:11:66:11,0)(00:22:77:22:77:22,1:2:3:4),mtu=1500"
+	---help---
+	 Set the network interface configuration. For each interface, define the interface 
+	 name, MAC address and participating ports, at the end (optionally) set the 
+         interfaces MTU. For example, the default configuration defines two interfaces, 
+         eth0 and eth1, and sets the MTU to 1500.
+
+endmenu
+
+menu "Gateway Features"
+
+config  MV_GTW_IGMP
+        bool "L2 IGMP Snooping support"
+        default y
+        ---help---
+          Support L2 IGMP snooping at the switch level, i.e. directing L3 routed multicast
+          stream to the specific L2 port which originally received an IGMP Join message,
+          instead of fluding all VLAN ports.
+
+config  MV_GTW_LINK_STATUS
+	bool "Link status change indications"
+	default y
+	---help---
+	  Support Phy link status change indications.
+
+endmenu
+
+endif
+

@@ -1,0 +1,81 @@
+config RTX_TRACE
+	bool "Tracing support"
+	depends on RTX_DOMAIN
+	select FRAME_POINTER
+	select KALLSYMS
+	select PROC_FS
+	---help---
+	  Activate this option if you want to use per-function tracing of
+	  the kernel. The tracer will collect data via instrumentation
+	  features like the one below or with the help of explicit calls
+	  of rt_trace_xxx(). See include/linux/aud/rt_trace.h for the
+	  in-kernel tracing API. The collected data and runtime control
+	  is available via /proc/audis/trace/*.
+
+if RTX_TRACE
+
+config RTX_TRACE_ENABLE
+	bool "Enable tracing on boot"
+	default y
+	---help---
+	  Disable this option if you want to arm the tracer after booting
+	  manually ("echo 1 > /proc/audis/trace/enable"). This can reduce
+	  boot time on slow embedded devices due to the tracer overhead.
+
+config RTX_TRACE_MCOUNT
+	bool "Instrument function entries"
+	default y
+	select FUNCTION_TRACER
+	select TRACING
+	select CONTEXT_SWITCH_TRACER
+	select FTRACE_MCOUNT_RECORD
+ 	select DYNAMIC_FTRACE
+	---help---
+	  When enabled, records every kernel function entry in the tracer
+	  log. While this slows down the system noticeably, it provides
+	  the highest level of information about the flow of events.
+	  However, it can be switched off in order to record only explicit
+	  RTX domain system trace points.
+
+config RTX_TRACE_IRQSOFF
+	bool "Trace IRQs-off times"
+	default y
+	---help---
+	  Activate this option if the RTX domain system shall trace the longest path
+	  with hard-IRQs switched off.
+
+config RTX_TRACE_SHIFT
+	int "Depth of trace log (14 => 16Kpoints, 15 => 32Kpoints)"
+	range 10 18
+	default 14
+	---help---
+	  The number of trace points to hold tracing data for each
+	  trace path, as a power of 2.
+
+config RTX_TRACE_VMALLOC
+	bool "Use vmalloc'ed trace buffer"
+	default y if EMBEDDED
+	---help---
+	  Instead of reserving static kernel data, the required buffer
+	  is allocated via vmalloc during boot-up when this option is
+	  enabled. This can help to start systems that are low on memory,
+	  but it slightly degrades overall performance. Try this option
+	  when a traced kernel hangs unexpectedly at boot time.
+
+config RTX_TRACE_PANIC
+	bool "Enable panic back traces"
+	default y
+	---help---
+	  Provides services to freeze and dump a back trace on panic
+	  situations. This is used e.g. on ordinary kernel oopses. 
+	  You can control the number of printed back trace points 
+	  via /proc/audis/trace.
+
+config RTX_TRACE_CONTEXT_SWITCH
+	bool "Enable context switch trace"
+	default y
+	---help---
+	  Activate this option if the context switches (LX- and RT-domain)
+	  shall be traced.
+
+endif

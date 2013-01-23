@@ -1,0 +1,77 @@
+#
+# application specific audis driver configuration
+#
+
+
+
+config AUD_PBUS_PLUS
+	tristate "driver for the pbus plus"
+	depends on PCI && (SIMATIC_CP15431 || AUD_SOC1_CP1500)
+	default n
+	---help---
+	  This option enables the driver
+	  for the pbus plus PCI interface.
+
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+
+	  more information <Manfred.Neugebauer@siemens.com>
+
+
+config AUD_KERNEX
+	tristate "Application specific audis driver (kernex.o)"
+	depends on MIPS && AUD_SOC1 && AUD_EXCEPTION_HOOK
+	default n
+	help
+	  Kernel Module "kernex.o"
+
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+	 
+
+config AUD_BOARDEX
+	tristate "Application specific audis driver (boardex.o)"
+	depends on MIPS && AUD_SOC1
+	help
+	  Kernel Module "boardex.o"
+
+	  (Module 'kernex' needs config option Kernel hacking->Audis settings->Hook for a system exception handler)
+
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+
+config AUD_CPXXX5HW
+	tristate "Application specific audis driver (cpXXX5hw.o)"
+	depends on MIPS && AUD_SOC1
+	help
+	  Kernel Module "cpXXX5hw.o"
+
+	  (Module 'kernex' needs config option Kernel hacking->Audis settings->Hook for a system exception handler)
+
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+
+config AUD_RUNFW
+	tristate "Application specific audis driver (runfw.o)"
+	depends on MIPS && AUD_SOC1
+	help
+	  Kernel Module "runfw.o"
+
+	  (Module 'kernex' needs config option Kernel hacking->Audis settings->Hook for a system exception handler)
+	
+	  If you want to have this support embedded into your kernel, say Y.
+	  To compile this driver as a module, choose M here.
+
+
+config AUD_SIMPLE_SYNC_TIMER
+	tristate "simple audis sync timer driver"
+	help
+	  this is a simple example of an audis synchronous timer driver
+	  Manfred.Neugebauer@siemens.com
+
+config AUD_SIMPLE_EVENT_DRIVER
+	tristate "simple audis event driver"
+	help
+	  this is a simple example of an audis event driver
+	  Manfred.Neugebauer@siemens.com
+

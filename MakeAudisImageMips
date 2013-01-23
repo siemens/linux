@@ -1,0 +1,9 @@
+#! /bin/sh
+
+echo "make uImage in directory $1 for mips architecture"
+
+for i in $(mips-v42-objdump -f $1/vmlinux | grep "start address" | cut -d " " -f 3-)
+do
+    mkimage -A mips -O linux -T kernel -C none -a 0x80008000 -e $i -n uImage -d $1/vmlinux.bin $1/uImage
+done
+
