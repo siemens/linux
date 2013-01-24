@@ -1144,6 +1144,7 @@ static int __tsi148_master_get(struct vme_master_resource *image, int *enabled,
 
 	i = image->number;
 
+	printk(KERN_INFO "tsi148_master_get: About to set lots of parameters\n");
 	ctl = ioread32be(bridge->base + TSI148_LCSR_OT[i] +
 		TSI148_LCSR_OFFSET_OTAT);
 
@@ -1159,6 +1160,11 @@ static int __tsi148_master_get(struct vme_master_resource *image, int *enabled,
 		TSI148_LCSR_OFFSET_OTOFU);
 	vme_offset_low = ioread32be(bridge->base + TSI148_LCSR_OT[i] +
 		TSI148_LCSR_OFFSET_OTOFL);
+
+	printk(KERN_INFO "   pci_base_high: %p\n", pci_base_high);
+	printk(KERN_INFO "   pci_base_low: %p\n", pci_base_low);
+	printk(KERN_INFO "   vme_offset_high: %p\n", vme_offset_high);
+	printk(KERN_INFO "   vme_offset_low: %p\n", vme_offset_low);
 
 	/* Convert 64-bit variables to 2x 32-bit variables */
 	reg_join(pci_base_high, pci_base_low, &pci_base);
@@ -1234,6 +1240,7 @@ static int __tsi148_master_get(struct vme_master_resource *image, int *enabled,
 	if ((ctl & TSI148_LCSR_OTAT_DBW_M) == TSI148_LCSR_OTAT_DBW_32)
 		*dwidth = VME_D32;
 
+	printk(KERN_INFO "Finished setting up stuff\n");
 	return 0;
 }
 

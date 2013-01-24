@@ -40,6 +40,8 @@
 #include "../vme.h"
 #include "vme_user.h"
 
+#define VME_DEBUG
+
 static DEFINE_MUTEX(vme_user_mutex);
 static const char driver_name[] = "vme_user";
 
@@ -470,6 +472,9 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 	void __user *argp = (void __user *)arg;
 
 	statistics.ioctls++;
+#ifdef VME_DEBUG
+	printk(KERN_INFO "VME: ioctl received\n");
+#endif	
 
 	switch (type[minor]) {
 	case CONTROL_MINOR:

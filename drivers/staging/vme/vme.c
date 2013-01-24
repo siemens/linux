@@ -473,6 +473,11 @@ int vme_master_set(struct vme_resource *resource, int enabled,
 		return -EINVAL;
 	}
 
+	printk(KERN_INFO "VME master window image attributes\n");
+	printk(KERN_INFO "  address_attr: %u\n", image->address_attr);
+	printk(KERN_INFO "  cycle_attr: %u\n", image->cycle_attr);
+	printk(KERN_INFO "  width_attr: %u\n", image->width_attr);
+
 	if (!(((image->address_attr & aspace) == aspace) &&
 		((image->cycle_attr & cycle) == cycle) &&
 		((image->width_attr & dwidth) == dwidth))) {
