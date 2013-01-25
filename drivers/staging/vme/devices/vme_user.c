@@ -633,9 +633,6 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 	void __user *argp = (void __user *)arg;
 
 	statistics.ioctls++;
-#ifdef VME_DEBUG
-	printk(KERN_INFO "VME: ioctl received\n");
-#endif	
 
 	if (type[minor] != CONTROL_MINOR)
 		if (image[minor].resource == NULL)
