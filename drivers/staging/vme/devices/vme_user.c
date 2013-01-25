@@ -1013,6 +1013,8 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 
 	vme_create_sysfs_entry(CONTROL_MINOR);
 
+	return 0;
+
 err_class:
 	cdev_del(vme_user_cdev);
 err_char:
