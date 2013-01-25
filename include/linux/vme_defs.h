@@ -1,6 +1,8 @@
 #ifndef VME_DEFS_H
 #define VME_DEFS_H
 
+#include <linux/types.h>
+
 /* VME definitions shared between kernel and userland */
 
 /* Resource Type */
@@ -18,9 +20,9 @@ enum vme_dwb_dhb {
 
 struct vme_window {
 	enum vme_resource_type type;	/* Master or Slave */
-	u32 aspace;			/* Address Space */
-	u32 cycle;			/* Cycle properties */
-	u32 dwidth;			/* Maximum Data Width */
+	__u32 aspace;			/* Address Space */
+	__u32 cycle;			/* Cycle properties */
+	__u32 dwidth;			/* Maximum Data Width */
 };
 
 /*
