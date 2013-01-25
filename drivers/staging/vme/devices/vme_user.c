@@ -558,51 +558,7 @@ static int get_vme_minor(enum vme_resource_type type)
 	return -EMFILE;
 }
 
-static int request_slave_window(struct vme_window *window)
-{
-	int i;
-
-	// TODO: Does this belong here? Likely not. If there
-	// is no bridge, then there;s no control file.
-	if (!vme_user_bridge)
-		return -ENODEV;
-
-	i = get_vme_minor(window->type);
-
-	/* All available windows are taken */
-	if (i < 0)
-		return i;
-
-	/* Request slave window and allocate buffer */
-	/* XXX Need to properly request attributes */
-
-	/* For ca91cx42 bridge there are only two slave windows
-	 * supporting A16 addressing, so we request A24 supported
-	 * by all windows.
-	 */
-	image[i].resource = vme_slave_request(vme_user_bridge,
-					      VME_A24, VME_SCT);
-	if (image[i].resource == NULL) {
-		pr_warn("Unable to allocate slave resource\n");
-		return -ENODEV;
-	}
-
-	image[i].size_buf = PCI_BUF_SIZE;
-	image[i].kern_buf = vme_alloc_consistent(image[i].resource,
-						 image[i].size_buf,
-						 &image[i].pci_buf);
-	if (image[i].kern_buf == NULL) {
-		pr_warn("Unable to allocate memory for buffer\n");
-		image[i].pci_buf = 0;
-		vme_slave_free(image[i].resource);
-		image[i].resource = NULL;
-		return -ENOMEM;
-	}
-
-	return i;
-}
-
-static int request_master_window(struct vme_window *window)
+static int request_window(struct vme_window *window)
 {
 	int i;
 
@@ -617,25 +573,35 @@ static int request_master_window(struct vme_window *window)
 	if (i < 0)
 		return -EMFILE;
 
-	/*
-	 * Request master resource and allocate page sized buffer for small
-	 * reads and writes
-	 */
+	/* Request resource and allocate buffer */
+	if (window->type == VME_MASTER) {
+		image[i].resource = vme_master_request(vme_user_bridge,
+						       VME_A32, VME_SCT, VME_D32);
+	} else {
+		image[i].resource = vme_slave_request(vme_user_bridge,
+						      VME_A24, VME_SCT);
+	}
 
-	/* XXX Need to properly request attributes */
-	image[i].resource = vme_master_request(vme_user_bridge,
-					       VME_A32, VME_SCT, VME_D32);
 	if (image[i].resource == NULL) {
-		pr_warn("Unable to allocate master resource\n");
+		pr_warn("Unable to allocate VME resource\n");
 		return -ENODEV;
 	}
 
 	image[i].size_buf = PCI_BUF_SIZE;
-	image[i].kern_buf = kmalloc(image[i].size_buf, GFP_KERNEL);
+	if (window->type == VME_MASTER)
+		image[i].kern_buf = kmalloc(image[i].size_buf, GFP_KERNEL);
+	else
+		image[i].kern_buf = vme_alloc_consistent(image[i].resource,
+							 image[i].size_buf,
+							 &image[i].pci_buf);
+
 	if (image[i].kern_buf == NULL) {
-		pr_warn("Unable to allocate memory for master window buffers\n");
+		pr_warn("Unable to allocate memory for window buffer\n");
 		image[i].pci_buf = 0; // TODO: What good for?
-		vme_master_free(image[i].resource);
+		if (window->type == VME_MASTER)
+			vme_master_free(image[i].resource);
+		else
+			vme_slave_free(image[i].resource);
 		image[i].resource = NULL;
 		return -ENOMEM;
 	}
@@ -722,10 +688,8 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 			switch (window.type) {
 			case VME_MASTER:
-				i = request_master_window(&window);
-				break;
 			case VME_SLAVE:
-				i = request_slave_window(&window);
+				i = request_window(&window);
 				break;
 			default:
 				return -EINVAL;
