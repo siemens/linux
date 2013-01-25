@@ -114,3 +114,4 @@ obj-$(CONFIG_STAGING)		+= staging/
 obj-$(CONFIG_RTX_DOMAIN)	+= aud/
 obj-y				+= platform/
 obj-y				+= ieee802154/
+obj-$(CONFIG_VME_BUS)		+= vme/

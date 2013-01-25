@@ -30,7 +30,7 @@
 #include <linux/io.h>
 #include <linux/uaccess.h>
 
-#include "../vme.h"
+#include <linux/vme.h>
 #include "../vme_bridge.h"
 #include "vme_tsi148.h"
 

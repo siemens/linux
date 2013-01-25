@@ -114,3 +114,5 @@ source "drivers/staging/Kconfig"
 
 source "drivers/platform/Kconfig"
 endmenu
+source "drivers/vme/Kconfig"
+
