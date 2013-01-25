@@ -530,7 +530,7 @@ int vme_create_sysfs_entry(int i)
 		return PTR_ERR(image[i].device);
 	}
 
-	return i;
+	return 0;
 }
 
 static int get_vme_minor(enum vme_resource_type type)
