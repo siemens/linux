@@ -587,10 +587,13 @@ static int request_window(struct vme_window *window)
 	/* Request resource and allocate buffer */
 	if (window->type == VME_MASTER) {
 		image[i].resource = vme_master_request(vme_user_bridge,
-						       VME_A32, VME_SCT, VME_D32);
+						       window->aspace,
+						       window->cycle,
+						       window->dwidth);
 	} else {
 		image[i].resource = vme_slave_request(vme_user_bridge,
-						      VME_A24, VME_SCT);
+						      window->aspace,
+						      window->cycle);
 	}
 
 	if (image[i].resource == NULL) {
