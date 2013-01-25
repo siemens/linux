@@ -624,13 +624,214 @@ static int request_window(struct vme_window *window)
 }
 
 
+static int vme_do_control_ioctl(unsigned int cmd, unsigned long arg) {
+	int r = -EFAULT;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+	case VME_IRQ_GEN: {
+		struct vme_irq_id irq_req;
+		if (copy_from_user(&irq_req, argp,
+				   sizeof(struct vme_irq_id)))
+			goto out;
+		
+		r = vme_irq_generate(vme_user_bridge,
+				     irq_req.level,
+				     irq_req.statid,
+				     irq_req.timeout_usec);
+		
+		break;
+	}
+	case VME_GET_STATUS: {
+		struct vme_status status;
+		memset(&status, 0, sizeof(struct vme_status));
+		
+		r = vme_get_status(vme_user_bridge, &status);
+		
+		if (copy_to_user(argp, &status,
+				 sizeof(struct vme_status))) {
+			r = -EFAULT;
+			goto out;
+		}
+		break;
+	}
+	case VME_REQUEST_BUS:
+		r = vme_set_dwb(vme_user_bridge, 1);
+		break;
+	case VME_RELEASE_BUS:
+		r = vme_set_dwb(vme_user_bridge, 0);
+		break;
+	case VME_QUERY_DWB_DHB:
+		r = vme_get_dwb_dhb(vme_user_bridge,
+				    (enum vme_dwb_dhb)arg);
+		break;
+	case VME_GET_SLOT_ID:
+		r = vme_slot_get(vme_user_bridge);
+		break;
+	case VME_REQUEST_WINDOW: {
+		struct vme_window window;
+		int i;
+		
+		if (copy_from_user(&window, argp, sizeof(window)))
+			goto out;
+		
+		switch (window.type) {
+		case VME_MASTER:
+		case VME_SLAVE:
+			i = request_window(&window);
+			break;
+		default:
+			return -EINVAL;
+		}
+		
+		if (i < 0) {
+			pr_err("Could not allocate window\n");
+			return i;
+		}
+		
+		r = vme_create_sysfs_entry(i);
+		
+		if (r < 0) {
+			switch(window.type) {
+			case VME_MASTER:
+				vme_cleanup_master(i);
+				break;
+			case VME_SLAVE:
+				vme_cleanup_slave(i);
+				break;
+			default:
+				return -EINVAL; /* To please gcc */
+			}
+			
+			return r;
+		}
+		
+			break;
+	}
+		
+	default:
+		r = -EINVAL;
+	}
+
+	return r;
+
+out:
+	pr_warning("vme_user: Partial copy to userspace\n");
+	return -EFAULT;
+}
+
+int vme_do_master_ioctl(unsigned int cmd, unsigned long arg,
+			unsigned int minor, struct file *file) {
+	int r = -EFAULT;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+	case VME_GET_MASTER: {
+		struct vme_master master;
+		memset(&master, 0, sizeof(struct vme_master));
+
+		r = vme_master_get(image[minor].resource,
+				   &master.enable, &master.vme_addr,
+				   &master.size, &master.win.aspace,
+				   &master.win.cycle,
+				   &master.win.dwidth);
+
+		if (copy_to_user(argp, &master,
+				 sizeof(struct vme_master))) {
+			r = -EFAULT;
+			goto out;
+		}
+
+		break;
+	}
+
+	case VME_SET_MASTER: {
+		struct vme_master master;
+		if (copy_from_user(&master, argp, sizeof(master)))
+			goto out;
+
+		r = vme_master_set(image[minor].resource,
+				   master.enable, master.vme_addr,
+				   master.size, master.win.aspace,
+				   master.win.cycle, master.win.dwidth);
+
+		break;
+	}
+
+	case VME_RMW: {
+		struct vme_rmw rmw;
+		if (copy_from_user(&rmw, argp, sizeof(rmw)))
+			goto out;
+
+		r = vme_master_rmw(image[minor].resource,
+				   rmw.mask, rmw.compare,
+				   rmw.swap, file->f_pos);
+
+		break;
+	}
+	default:
+		r = -EINVAL;
+	}
+
+	return r;
+
+out:
+	pr_warning("vme_user: Partial copy to userspace\n");
+	return -EFAULT;
+}
+
+int vme_do_slave_ioctl(unsigned int cmd, unsigned long arg,
+		       unsigned int minor) {
+	int r = -EFAULT;
+	dma_addr_t pci_addr;
+	void __user *argp = (void __user *)arg;
+
+	switch (cmd) {
+	case VME_GET_SLAVE: {
+		struct vme_slave slave;
+		memset(&slave, 0, sizeof(struct vme_slave));
+		
+		r = vme_slave_get(image[minor].resource,
+				  &slave.enable, &slave.vme_addr,
+				  &slave.size, &pci_addr,
+				  &slave.win.aspace, &slave.win.cycle);
+		
+		if (copy_to_user(argp, &slave,
+				 sizeof(struct vme_slave))) {
+			r = -EINVAL;
+			goto out;
+		}
+		
+		break;
+	}
+		
+	case VME_SET_SLAVE: {
+		struct vme_slave slave;
+		if (copy_from_user(&slave, argp, sizeof(slave)))
+			goto out;
+		
+		r = vme_slave_set(image[minor].resource,
+				  slave.enable, slave.vme_addr,
+				  slave.size, image[minor].pci_buf,
+				  slave.win.aspace, slave.win.cycle);
+		
+		break;
+	}
+	default:
+		r = -EINVAL;
+	}
+	
+	return r;
+
+out:
+	pr_warning("vme_user: Partial copy to userspace\n");
+	return -EFAULT;
+}
+
 static int vme_user_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
 	unsigned int minor = MINOR(inode->i_rdev);
-	int r = -EFAULT;
-	dma_addr_t pci_addr;
-	void __user *argp = (void __user *)arg;
 
 	statistics.ioctls++;
 
@@ -640,184 +841,14 @@ static int vme_user_ioctl(struct inode *inode, struct file *file,
 
 	switch (type[minor]) {
 	case CONTROL_MINOR:
-		switch (cmd) {
-		case VME_IRQ_GEN: {
-			struct vme_irq_id irq_req;
-			if (copy_from_user(&irq_req, (char *)arg,
-					   sizeof(struct vme_irq_id)))
-				goto out;
-
-			r = vme_irq_generate(vme_user_bridge,
-					     irq_req.level,
-					     irq_req.statid,
-					     irq_req.timeout_usec);
-
-			break;
-		}
-		case VME_GET_STATUS: {
-			struct vme_status status;
-			memset(&status, 0, sizeof(struct vme_status));
-
-			r = vme_get_status(vme_user_bridge, &status);
-
-			if (copy_to_user(argp, &status,
-					 sizeof(struct vme_status))) {
-				r = -EFAULT;
-				goto out;
-			}
-			break;
-		}
-		case VME_REQUEST_BUS:
-			r = vme_set_dwb(vme_user_bridge, 1);
-			break;
-		case VME_RELEASE_BUS:
-			r = vme_set_dwb(vme_user_bridge, 0);
-			break;
-		case VME_QUERY_DWB_DHB:
-			r = vme_get_dwb_dhb(vme_user_bridge,
-					    (enum vme_dwb_dhb)arg);
-			break;
-		case VME_GET_SLOT_ID:
-			r = vme_slot_get(vme_user_bridge);
-			break;
-		case VME_REQUEST_WINDOW: {
-			struct vme_window window;
-			int i;
-
-			if (copy_from_user(&window, argp, sizeof(window)))
-				goto out;
-
-			switch (window.type) {
-			case VME_MASTER:
-			case VME_SLAVE:
-				i = request_window(&window);
-				break;
-			default:
-				return -EINVAL;
-			}
-
-			if (i < 0) {
-				pr_err("Could not allocate window\n");
-				return i;
-			}
-
-			r = vme_create_sysfs_entry(i);
-
-			if (r < 0) {
-				switch(window.type) {
-				case VME_MASTER:
-					vme_cleanup_master(i);
-					break;
-				case VME_SLAVE:
-					vme_cleanup_slave(i);
-					break;
-				default:
-					return -EINVAL; /* To please gcc */
-				}
-
-				return r;
-			}
-
-			break;
-		}
-
-		default:
-			r = -EINVAL;
-		}
+		return vme_do_control_ioctl(cmd, arg);
 	case MASTER_MINOR:
-		switch (cmd) {
-		case VME_GET_MASTER: {
-			struct vme_master master;
-			memset(&master, 0, sizeof(struct vme_master));
-
-			r = vme_master_get(image[minor].resource,
-					   &master.enable, &master.vme_addr,
-					   &master.size, &master.win.aspace,
-					   &master.win.cycle,
-					   &master.win.dwidth);
-
-			if (copy_to_user(argp, &master,
-					 sizeof(struct vme_master))) {
-				r = -EFAULT;
-				goto out;
-			}
-
-			break;
-		}
-
-		case VME_SET_MASTER: {
-			struct vme_master master;
-			if (copy_from_user(&master, argp, sizeof(master)))
-				goto out;
-
-			r = vme_master_set(image[minor].resource,
-					   master.enable, master.vme_addr,
-					   master.size, master.win.aspace,
-					   master.win.cycle, master.win.dwidth);
-
-			break;
-		}
-
-		case VME_RMW: {
-			struct vme_rmw rmw;
-			if (copy_from_user(&rmw, argp, sizeof(rmw)))
-				goto out;
-
-			r = vme_master_rmw(image[minor].resource,
-					   rmw.mask, rmw.compare,
-					   rmw.swap, file->f_pos);
-
-			break;
-		}
-		default:
-			r = -EINVAL;
-		}
-		break;
+		return vme_do_master_ioctl(cmd, arg, minor, file);
 	case SLAVE_MINOR:
-		switch (cmd) {
-		case VME_GET_SLAVE: {
-			struct vme_slave slave;
-			memset(&slave, 0, sizeof(struct vme_slave));
-
-			r = vme_slave_get(image[minor].resource,
-					  &slave.enable, &slave.vme_addr,
-					  &slave.size, &pci_addr,
-					  &slave.win.aspace, &slave.win.cycle);
-
-			if (copy_to_user(argp, &slave,
-					 sizeof(struct vme_slave))) {
-				r = -EINVAL;
-				goto out;
-			}
-
-			break;
-		}
-
-		case VME_SET_SLAVE: {
-			struct vme_slave slave;
-			if (copy_from_user(&slave, argp, sizeof(slave)))
-				goto out;
-
-			r = vme_slave_set(image[minor].resource,
-					  slave.enable, slave.vme_addr,
-					  slave.size, image[minor].pci_buf,
-					  slave.win.aspace, slave.win.cycle);
-
-			break;
-		}
-		default:
-			r = -EINVAL;
-		}
-		break;
+		return vme_do_slave_ioctl(cmd, arg, minor);
 	default:
-		r = -EINVAL;
+		return -EINVAL;
 	}
-
-	return r;
-
-out:
-	pr_warning("Partial copy to userspace\n");
-	return -EFAULT;
 }
 
 static long
