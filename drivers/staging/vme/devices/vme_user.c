@@ -1035,6 +1035,8 @@ static int __devexit vme_user_remove(struct vme_dev *dev)
 		}
 	}
 
+	device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, CONTROL_MINOR));
+
 	/* Unregister device driver */
 	cdev_del(vme_user_cdev);
 
