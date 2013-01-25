@@ -37,7 +37,6 @@
 #include <linux/mutex.h>
 #include <linux/types.h>
 #include <linux/major.h>
-#include <linux/printk.h>
 
 #include <linux/io.h>
 #include <linux/uaccess.h>
@@ -46,6 +45,10 @@
 #include "vme_user.h"
 
 #define VME_DEBUG
+
+void pr_warn(char *s) {
+	printk("%s", s);
+}
 
 static DEFINE_MUTEX(vme_user_mutex);
 static const char driver_name[] = "vme_user";
@@ -864,7 +867,7 @@ vme_user_unlocked_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	return ret;
 }
 
-static char *vme_devnode(struct device *dev, mode_t *mode)
+static char *vme_devnode(struct device *dev)
 {
 	struct vme_dev *vme_dev = container_of(dev, struct vme_dev, dev);
 
@@ -899,7 +902,7 @@ static int vme_dev_uevent(struct device *dev, struct kobj_uevent_env *env)
 struct device_type vme_device_type = {
 	.name    = "vme_device",
 	.uevent	 = vme_dev_uevent,
-	.devnode = vme_devnode,
+	.nodename = vme_devnode,
 };
 
 static struct vme_driver vme_user_driver = {
