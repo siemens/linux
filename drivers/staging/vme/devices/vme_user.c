@@ -624,16 +624,6 @@ static int request_window(struct vme_window *window)
 }
 
 
-/*
- * The ioctls provided by the old VME access method (the one at vmelinux.org)
- * are most certainly wrong as the effectively push the registers layout
- * through to user space. Given that the VME core can handle multiple bridges,
- * with different register layouts this is most certainly not the way to go.
- *
- * We aren't using the structures defined in the Motorola driver either - these
- * are also quite low level, however we should use the definitions that have
- * already been defined.
- */
 static int vme_user_ioctl(struct inode *inode, struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
