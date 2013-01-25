@@ -65,6 +65,9 @@ struct vme_slave {
 #define VME_USER3	0x80
 #define VME_USER4	0x100
 
+#define VME_ASPACE_MASK	(VME_A16 | VME_A24 | VME_A32 | VME_A64 |	\
+			 VME_CRCSR | VME_USER1 | VME_USER2 | 		\
+			 VME_USER3 | VME_USER4)
 #define VME_A16_MAX	0x10000ULL
 #define VME_A24_MAX	0x1000000ULL
 #define VME_A32_MAX	0x100000000ULL
@@ -89,11 +92,18 @@ struct vme_slave {
 #define	VME_PROG	0x4000
 #define	VME_DATA	0x8000
 
+#define VME_CYCLE_MASK	(VME_SCT | VME_BLT | VME_MBLT | VME_2eVME |	\
+			 VME_2eSST | VME_2eSSTB | VME_2eSST160 |	\
+			 VME_2eSST267 | VME_2eSST320 | VME_SUPER |	\
+			 VME_USER | VME_PROG | VME_DATA)
+
 /* VME Data Widths */
 #define VME_D8		0x1
 #define VME_D16		0x2
 #define VME_D32		0x4
 #define VME_D64		0x8
+
+#define VME_DATA_MASK	(VME_D8 | VME_D16 | VME_D32 | VME_D64)
 
 /* Arbitration Scheduling Modes */
 #define VME_R_ROBIN_MODE	0x1

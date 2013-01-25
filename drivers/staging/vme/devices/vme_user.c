@@ -573,6 +573,17 @@ static int request_window(struct vme_window *window)
 	if (i < 0)
 		return -EMFILE;
 
+	/* Ensure parameters are valid */
+	// TODO: Can any of these be 0 legally?
+	if (window->aspace == 0 || window->cycle == 0 ||
+	    window->dwidth == 0)
+		return -EINVAL;
+
+	if (((window->aspace & VME_ASPACE_MASK) != window->aspace) ||
+	    ((window->cycle & VME_CYCLE_MASK) != window->cycle) ||
+	    ((window->dwidth & VME_DATA_MASK) != window->dwidth))
+		return -EINVAL;
+
 	/* Request resource and allocate buffer */
 	if (window->type == VME_MASTER) {
 		image[i].resource = vme_master_request(vme_user_bridge,
