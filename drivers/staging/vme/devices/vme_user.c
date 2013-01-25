@@ -871,6 +871,7 @@ static char *vme_devnode(struct device *dev)
 {
 	struct vme_dev *vme_dev = container_of(dev, struct vme_dev, dev);
 
+	printk("VME: vme_devnode called\n");
 	return kasprintf(GFP_KERNEL, "bus/vme/%03d/%03d",
 			 vme_get_bridge_num(vme_dev->bridge),
 			 vme_dev->num);
@@ -881,6 +882,7 @@ static int vme_dev_uevent(struct device *dev, struct kobj_uevent_env *env)
 {
 	struct vme_dev *vme_dev = container_of(dev, struct vme_dev, dev);
 
+	printk("VME: Generating hotplug event\n");
 	if (add_uevent_var(env, "BUSNUM=%03d",
 			   vme_get_bridge_num(vme_dev->bridge)))
 		return -ENOMEM;
@@ -958,6 +960,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 {
 	int i, err;
 
+	printk("VME: Probe routine called\n");
 	/* Save pointer to the bridge device */
 	if (vme_user_bridge != NULL) {
 		printk(KERN_ERR "%s: Driver can only be loaded for 1 device\n",
@@ -979,6 +982,7 @@ static int __devinit vme_user_probe(struct vme_dev *vdev)
 	reset_counters();
 
 	/* Assign major and minor numbers for the driver */
+	printk("VME: Registering character devices\n");
 	err = register_chrdev_region(MKDEV(VME_MAJOR, 0), VME_DEVS,
 				     driver_name);
 	if (err) {
