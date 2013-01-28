@@ -19,7 +19,7 @@ enum vme_dwb_dhb {
 };
 
 struct vme_window {
-	enum vme_resource_type type;	/* Master or Slave */
+	__u8  type;			/* enum vme_resource_type*/
 	__u32 aspace;			/* Address Space */
 	__u32 cycle;			/* Cycle properties */
 	__u32 dwidth;			/* Maximum Data Width */
