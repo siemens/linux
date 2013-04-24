@@ -1034,24 +1034,24 @@ int vme_irq_request(struct vme_dev *vdev, int level, int statid,
 }
 EXPORT_SYMBOL(vme_irq_request);
 
-void vme_irq_free(struct vme_dev *vdev, int level, int statid)
+int vme_irq_free(struct vme_dev *vdev, int level, int statid)
 {
 	struct vme_bridge *bridge;
 
 	bridge = vdev->bridge;
 	if (bridge == NULL) {
 		printk(KERN_ERR "Can't find VME bus\n");
-		return;
+		return -ENODEV;
 	}
 
 	if ((level < 1) || (level > 7)) {
 		printk(KERN_ERR "Invalid interrupt level\n");
-		return;
+		return -EFAULT;
 	}
 
 	if (bridge->irq_set == NULL) {
 		printk(KERN_ERR "Configuring interrupts not supported\n");
-		return;
+		return -ENXIO;
 	}
 
 	mutex_lock(&bridge->irq_mtx);
@@ -1066,6 +1066,8 @@ void vme_irq_free(struct vme_dev *vdev, int level, int statid)
 	bridge->irq[level - 1].callback[statid].priv_data = NULL;
 
 	mutex_unlock(&bridge->irq_mtx);
+
+	return 0;
 }
 EXPORT_SYMBOL(vme_irq_free);
 
