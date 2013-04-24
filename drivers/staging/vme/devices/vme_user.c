@@ -642,6 +642,15 @@ static int vme_destroy_window(unsigned int i)
 	return 0;
 }
 
+static void irq_callback(int level, int statid, void *data)
+{
+	// TODO: We need to propagate the interrupt into
+	// the userland somehow (UIO for non-RT, audis mechanisms
+	// for real-time)
+	printk("Received VME interrupt (level %d, statid %d)\n",
+	       level, statid);
+}
+
 
 static int vme_do_control_ioctl(unsigned int cmd, unsigned long arg) {
 	int r = -EFAULT;
@@ -659,6 +668,22 @@ static int vme_do_control_ioctl(unsigned int cmd, unsigned long arg) {
 				     irq_req.statid,
 				     irq_req.timeout_usec);
 		
+		break;
+	}
+	case VME_REQUEST_INTERRUPT:
+	case VME_RELEASE_INTERRUPT: {
+		struct vme_irq_id irq;
+		if (copy_from_user(&irq, argp,
+				   sizeof(struct vme_irq_id)))
+			goto out;
+	
+		if (cmd == VME_REQUEST_INTERRUPT)
+			return vme_irq_request(vme_user_bridge, irq.level,
+					       irq.statid, &irq_callback,
+					       NULL);
+		else
+			return vme_irq_free(vme_user_bridge, irq.level,
+					    irq.statid);
 		break;
 	}
 	case VME_GET_STATUS: {

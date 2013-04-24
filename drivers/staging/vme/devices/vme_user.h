@@ -35,5 +35,7 @@ struct vme_rmw {
 #define VME_REQUEST_BUS _IO(VME_IOC_MAGIC, 11)
 #define VME_RELEASE_BUS _IO(VME_IOC_MAGIC, 12)
 #define VME_QUERY_DWB_DHB _IO(VME_IOC_MAGIC, 13)
+#define VME_REQUEST_INTERRUPT _IOR(VME_IOC_MAGIC, 14, struct vme_irq_id)
+#define VME_RELEASE_INTERRUPT _IOR(VME_IOC_MAGIC, 15, struct vme_irq_id)
 
 #endif /* _VME_USER_H_ */
