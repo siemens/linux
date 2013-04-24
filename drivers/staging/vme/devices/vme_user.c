@@ -624,6 +624,25 @@ static int request_window(struct vme_window *window)
 }
 
 
+static int vme_destroy_window(unsigned int i)
+{
+	/* 
+	 * Caller needs to make sure that i represents a master
+	 * or slave window, not the control minor number
+	 */
+	if (image[i].users > 0)
+		return -EINVAL;
+
+	if (type[i] == VME_MASTER)
+		vme_cleanup_master(i);
+
+	if (type[i] == VME_SLAVE)
+		vme_cleanup_slave(i);
+	
+	return 0;
+}
+
+
 static int vme_do_control_ioctl(unsigned int cmd, unsigned long arg) {
 	int r = -EFAULT;
 	void __user *argp = (void __user *)arg;
@@ -769,6 +788,9 @@ int vme_do_master_ioctl(unsigned int cmd, unsigned long arg,
 
 		break;
 	}
+	case VME_DESTROY_WINDOW:
+		r = vme_destroy_window(minor);
+		break;
 	default:
 		r = -EINVAL;
 	}
@@ -817,6 +839,9 @@ int vme_do_slave_ioctl(unsigned int cmd, unsigned long arg,
 		
 		break;
 	}
+	case VME_DESTROY_WINDOW:
+		r = vme_destroy_window(minor);
+		break;
 	default:
 		r = -EINVAL;
 	}
