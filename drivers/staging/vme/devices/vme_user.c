@@ -510,13 +510,13 @@ int vme_create_sysfs_entry(int i)
 
 	switch (type[i]) {
 	case MASTER_MINOR:
-		sprintf(name, "bus/vme/m%%d");
+		sprintf(name, "b0m%%d");
 		break;
 	case CONTROL_MINOR:
-		sprintf(name, "bus/vme/ctl");
+		sprintf(name, "b0ctl");
 		break;
 	case SLAVE_MINOR:
-		sprintf(name, "bus/vme/s%%d");
+		sprintf(name, "b0s%%d");
 		break;
 	default:
 		return -EINVAL;
