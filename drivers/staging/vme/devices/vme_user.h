@@ -17,17 +17,19 @@ struct vme_irq_id {
 };
 
 struct vme_rmw {
-	unsigned int mask;
-	unsigned int compare;
-	unsigned int swap;
+	__u32 mask;
+	__u32 compare;
+	__u32 swap;
+	__u32 result;
 };
 
+// TODO: Check if the read/write directions are properly set here
 #define VME_GET_SLAVE _IOR(VME_IOC_MAGIC, 1, struct vme_slave)
 #define VME_SET_SLAVE _IOW(VME_IOC_MAGIC, 2, struct vme_slave)
 #define VME_GET_MASTER _IOR(VME_IOC_MAGIC, 3, struct vme_master)
 #define VME_SET_MASTER _IOW(VME_IOC_MAGIC, 4, struct vme_master)
 #define VME_IRQ_GEN _IOW(VME_IOC_MAGIC, 5, struct vme_irq_id)
-#define VME_RMW _IOW(VME_IOC_MAGIC, 6, struct vme_rmw)
+#define VME_RMW _IOWR(VME_IOC_MAGIC, 6, struct vme_rmw)
 #define VME_GET_SLOT_ID _IO(VME_IOC_MAGIC, 7)
 #define VME_GET_STATUS _IOR(VME_IOC_MAGIC, 8, struct vme_status)
 #define VME_REQUEST_WINDOW _IOR(VME_IOC_MAGIC, 9, struct vme_window)
