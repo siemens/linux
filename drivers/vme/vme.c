@@ -222,6 +222,7 @@ static int vme_check_window(u32 aspace, unsigned long long vme_base,
 		break;
 	}
 
+	printk("vme_check_window: Returning %d\n", retval);
 	return retval;
 }
 
@@ -472,11 +473,6 @@ int vme_master_set(struct vme_resource *resource, int enabled,
 		return -EINVAL;
 	}
 
-	printk(KERN_INFO "VME master window image attributes\n");
-	printk(KERN_INFO "  address_attr: %u\n", image->address_attr);
-	printk(KERN_INFO "  cycle_attr: %u\n", image->cycle_attr);
-	printk(KERN_INFO "  width_attr: %u\n", image->width_attr);
-
 	if (!(((image->address_attr & aspace) == aspace) &&
 		((image->cycle_attr & cycle) == cycle) &&
 		((image->width_attr & dwidth) == dwidth))) {
@@ -485,8 +481,10 @@ int vme_master_set(struct vme_resource *resource, int enabled,
 	}
 
 	retval = vme_check_window(aspace, vme_base, size);
-	if (retval)
+	if (retval) {
+		printk(KERN_WARNING "Invalid VME window specified\n");
 		return retval;
+	}
 
 	return bridge->master_set(image, enabled, vme_base, size, aspace,
 		cycle, dwidth);
@@ -1464,6 +1462,7 @@ int vme_get_dwb_dhb(struct vme_dev *vdev, enum vme_dwb_dhb type)
 {
 	struct vme_bridge *bridge;
 
+	printk("vme: get device wants/has bus\n");
 	bridge = vdev->bridge;
 	if (bridge == NULL) {
 		printk(KERN_ERR "Can't find VME bus\n");

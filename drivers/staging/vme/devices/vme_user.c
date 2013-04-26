@@ -204,6 +204,8 @@ static int vme_user_release(struct inode *inode, struct file *file)
 	down(&image[minor].sem);
 
 	image[minor].users--;
+	printk("*** vme: %d users left on minor %u\n", image[minor].users,
+	       minor);
 
 	up(&image[minor].sem);
 
@@ -493,6 +495,8 @@ void vme_cleanup_master(int i)
 	device_destroy(vme_user_sysfs_class, MKDEV(VME_MAJOR, i));
 	kfree(image[i].kern_buf);
 	vme_master_free(image[i].resource);
+	printk("*** VME: Setting resource %d to NULL\n", i);
+	image[i].resource = NULL;
 }
 
 /* Caller must ensure that i represents a slave window */
@@ -501,6 +505,7 @@ void vme_cleanup_slave(int i)
 	vme_slave_set(image[i].resource, 0, 0, 0, 0, VME_A32, 0);
 	buf_unalloc(i);
 	vme_slave_free(image[i].resource);
+	image[i].resource = NULL;
 }
 
 int vme_create_sysfs_entry(int i)
@@ -630,7 +635,15 @@ static int vme_destroy_window(unsigned int i)
 	 * Caller needs to make sure that i represents a master
 	 * or slave window, not the control minor number
 	 */
-	if (image[i].users > 0)
+
+	/* 
+	 * The closing user has to have the device file open,
+	 * so we don't check for > 0, but for > 1.
+	 * TODO: What if the user writes data into the window
+	 * after it has been closed? Is this case fully handled
+	 * in the code?
+	 */
+	if (image[i].users > 1)
 		return -EINVAL;
 
 	if (type[i] == VME_MASTER)
@@ -706,8 +719,7 @@ static int vme_do_control_ioctl(unsigned int cmd, unsigned long arg) {
 		r = vme_set_dwb(vme_user_bridge, 0);
 		break;
 	case VME_QUERY_DWB_DHB:
-		r = vme_get_dwb_dhb(vme_user_bridge,
-				    (enum vme_dwb_dhb)arg);
+		r = vme_get_dwb_dhb(vme_user_bridge, arg);
 		break;
 	case VME_GET_SLOT_ID:
 		r = vme_slot_get(vme_user_bridge);
@@ -804,12 +816,21 @@ int vme_do_master_ioctl(unsigned int cmd, unsigned long arg,
 
 	case VME_RMW: {
 		struct vme_rmw rmw;
+		printk("VME_RMW dispatcher\n");
+
 		if (copy_from_user(&rmw, argp, sizeof(rmw)))
 			goto out;
 
-		r = vme_master_rmw(image[minor].resource,
-				   rmw.mask, rmw.compare,
-				   rmw.swap, file->f_pos);
+		printk("Performing RMW cycle: 0x%x, 0x%x, 0x%x\n",
+		       rmw.mask, rmw.compare, rmw.swap);
+		rmw.result = vme_master_rmw(image[minor].resource,
+					    rmw.mask, rmw.compare,
+					    rmw.swap, file->f_pos);
+		if (copy_to_user(argp, &rmw, sizeof(rmw)))
+			goto out;
+
+		r = 0; // Call as such can only succeed
+		printk("Result: %x\n", rmw.result);
 
 		break;
 	}
@@ -1087,6 +1108,7 @@ static int __devexit vme_user_remove(struct vme_dev *dev)
 	}
 	class_destroy(vme_user_sysfs_class);
 
+	// TODO: USe vme_cleanup_master/slave here
 	for (i = MASTER_MINOR; i < (MASTER_MAX + 1); i++) {
 		if (image[i].resource) {
 			kfree(image[i].kern_buf);

@@ -7,15 +7,15 @@
 
 /* Resource Type */
 enum vme_resource_type {
-	VME_MASTER,
-	VME_SLAVE,
-	VME_DMA,
-	VME_LM
+	VME_MASTER = 0,
+	VME_SLAVE  = 1,
+	VME_DMA    = 2,
+	VME_LM     = 3
 };
 
 enum vme_dwb_dhb {
-	VME_DWB,	/* Device wants bus */
-	VME_DHB		/* Device has bus */
+	VME_DWB = 0,	/* Device wants bus */
+	VME_DHB = 1	/* Device has bus */
 };
 
 struct vme_window {
