@@ -2255,6 +2255,9 @@ static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
 
 	status->sysfail = (stat & TSI148_LCSR_INTS_SYSFLS) > 0;
 	status->acfail  = (stat & TSI148_LCSR_INTS_ACFLS) > 0;
+
+	stat = ioread32be(bridge->base + TSI148_LCSR_VSTAT);
+
 	status->scons   = (stat & TSI148_LCSR_VSTAT_SCONS) > 0;
 
 	return 0;
