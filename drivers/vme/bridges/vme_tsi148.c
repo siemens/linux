@@ -2260,6 +2260,8 @@ static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
 
 	status->scons   = (stat & TSI148_LCSR_VSTAT_SCONS) > 0;
 
+	status->iack    = tsi148_iack_received(bridge);
+
 	return 0;
 }
 
