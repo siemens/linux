@@ -2284,6 +2284,11 @@ static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
 
 	status->iack    = tsi148_iack_received(bridge);
 
+	stat = ioread32be(bridge->base + TSI148_CBAR);
+#define CBAR_SHIFT	3
+#define CBAR_MASK	(~(1 << 5)) << CBAR_SHIFT
+	status->cbar    = (stat & CBAR_MASK) >> CBAR_SHIFT;
+
 	return 0;
 }
 
