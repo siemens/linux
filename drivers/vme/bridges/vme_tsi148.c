@@ -212,6 +212,14 @@ static u32 tsi148_IACK_irqhandler(struct tsi148_driver *bridge)
 {
 	wake_up(&bridge->iack_queue);
 
+	/* 
+	 * bridge->vme_int can have been left locked in
+	 * tsi148_irq_generate(); if so, we can release
+	 * the lock here, since an IACK was received.
+	 */
+	if (mutex_is_locked(&bridge->vme_int))
+		mutex_unlock(&bridge->vme_int);
+
 	return TSI148_LCSR_INTC_IACKC;
 }
 
@@ -525,6 +533,15 @@ static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
 		ret = wait_event_interruptible_timeout(bridge->iack_queue,
 					       tsi148_iack_received(bridge),
 					       usecs_to_jiffies(timeout_usec));
+		/* 
+		 * NOTE: In case of timeout, the bridge->vme_int
+		 * is _kept_ and needs to be released by the IACK irq
+		 * handler. This way, we can not generate multiple
+		 * overlapping IRQ requests the tsi148 is not capable
+		 * of handling */
+		// TODO: How to handle -ERESTARTSYS?
+		if (ret == 0)
+			return -ETIMEDOUT;
 	} else {
 		wait_event_interruptible(bridge->iack_queue,
 					 tsi148_iack_received(bridge));
@@ -534,9 +551,6 @@ static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
 
 	if (ret > 0)
 		return 0;
-
-	if (ret == 0)
-		return -ETIMEDOUT;
 
 	return ret;
 }
