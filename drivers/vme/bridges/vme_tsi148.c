@@ -507,7 +507,7 @@ static void tsi148_irq_set(struct vme_bridge *tsi148_bridge, int level,
  * interrupt to be acked, possibly obeying a timeout.
  */
 static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
-			       int statid, unsigned int timeout_usec)
+			       int statid, int timeout_usec)
 {
 	u32 tmp;
 	int ret = 1;
@@ -542,6 +542,14 @@ static int tsi148_irq_generate(struct vme_bridge *tsi148_bridge, int level,
 		// TODO: How to handle -ERESTARTSYS?
 		if (ret == 0)
 			return -ETIMEDOUT;
+	} else if (timeout_usec < 0) {
+		/* 
+		 * Don't wait at all if timeout is less than zero
+		 * bridge->vme_int is _intentionally_ kept, it will
+		 * be automatically released by tsi148_IACK_irqhandler.
+		 */
+		
+		return 0;
 	} else {
 		wait_event_interruptible(bridge->iack_queue,
 					 tsi148_iack_received(bridge));

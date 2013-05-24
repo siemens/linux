@@ -152,7 +152,7 @@ struct vme_bridge {
 
 	/* Interrupt Functions */
 	void (*irq_set) (struct vme_bridge *, int, int, int);
-	int (*irq_generate) (struct vme_bridge *, int, int, unsigned int);
+	int (*irq_generate) (struct vme_bridge *, int, int, int);
 
 	/* Enable/disable acfail and sysfail interrupts */
 	int (*failure_enable) (struct vme_bridge *, enum vme_failure);
