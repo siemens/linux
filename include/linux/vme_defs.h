@@ -114,6 +114,7 @@ struct vme_status {
 	unsigned short sysfail:1;
 	unsigned short acfail:1;
 	unsigned short scons:1;
+	unsigned short iack:1;
 
 	// TODO: Whatever is of interest here
 };

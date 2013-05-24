@@ -2255,7 +2255,12 @@ static int tsi148_get_status(struct vme_bridge *tsi148_bridge,
 
 	status->sysfail = (stat & TSI148_LCSR_INTS_SYSFLS) > 0;
 	status->acfail  = (stat & TSI148_LCSR_INTS_ACFLS) > 0;
+
+	stat = ioread32be(bridge->base + TSI148_LCSR_VSTAT);
+
 	status->scons   = (stat & TSI148_LCSR_VSTAT_SCONS) > 0;
+
+	status->iack    = tsi148_iack_received(tsi148_bridge);
 
 	return 0;
 }
@@ -2372,11 +2377,22 @@ static int tsi148_crcsr_init(struct vme_bridge *tsi148_bridge,
 
 	vstat = tsi148_slot_get(tsi148_bridge);
 
-	if (cbar != vstat) {
-		cbar = vstat;
-		dev_info(tsi148_bridge->parent, "Setting CR/CSR offset\n");
-		iowrite32be(cbar<<3, bridge->base + TSI148_CBAR);
-	}
+/* CR/CSR-Base is already set by Monarch´s auto-id cycle
+ * or CR/CSR isn´t set yet because the Monarch has been late
+ * or this board will be the Monarch itself.
+ * NOTE: The position backplane does not uniquely identify the
+ * slot id; the ids could also be assigned manually
+ *
+ * In any cases we may not set the CR/CSR-Base here !
+ *
+ * But later on when the Monarch has finished Auto-Slot-ID we need
+ * to map PCIBus again
+ */
+//	if (cbar != vstat) {
+//		cbar = vstat;
+//		dev_info(tsi148_bridge->parent, "Setting CR/CSR offset\n");
+//		iowrite32be(cbar<<3, bridge->base + TSI148_CBAR);
+//	}
 	dev_info(tsi148_bridge->parent, "CR/CSR Offset: %d\n", cbar);
 
 	crat = ioread32be(bridge->base + TSI148_LCSR_CRAT);
