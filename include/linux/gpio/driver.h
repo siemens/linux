@@ -258,6 +258,9 @@ struct gpio_chip {
 	int			(*set_config)(struct gpio_chip *chip,
 					      unsigned offset,
 					      unsigned long config);
+	int			(*set_drive)(struct gpio_chip *chip,
+						unsigned offset, unsigned mode);
+
 	int			(*to_irq)(struct gpio_chip *chip,
 						unsigned offset);
 

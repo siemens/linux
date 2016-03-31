@@ -138,6 +138,8 @@ int gpiod_set_raw_array_value_cansleep(unsigned int array_size,
 int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce);
 int gpiod_set_transitory(struct gpio_desc *desc, bool transitory);
 
+int gpiod_set_drive(struct gpio_desc *desc, unsigned mode);
+
 int gpiod_is_active_low(const struct gpio_desc *desc);
 int gpiod_cansleep(const struct gpio_desc *desc);
 
@@ -439,6 +441,13 @@ static inline int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce)
 }
 
 static inline int gpiod_set_transitory(struct gpio_desc *desc, bool transitory)
+{
+	/* GPIO can never have been requested */
+	WARN_ON(1);
+	return -ENOSYS;
+}
+
+static inline int gpiod_set_drive(unsigned gpio, unsigned mode)
 {
 	/* GPIO can never have been requested */
 	WARN_ON(1);

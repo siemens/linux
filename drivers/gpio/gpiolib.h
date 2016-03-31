@@ -216,6 +216,11 @@ struct gpio_desc {
 #define FLAG_USED_AS_IRQ 9	/* GPIO is connected to an IRQ */
 #define FLAG_IS_HOGGED	11	/* GPIO is hogged */
 #define FLAG_TRANSITORY 12	/* GPIO may lose value in sleep or reset */
+#define FLAG_SLEEP_MAY_LOOSE_VALUE 13	/* GPIO may loose value in sleep */
+#define FLAG_PULLUP	14	/* Gpio drive is resistive pullup */
+#define FLAG_PULLDOWN	15	/* Gpio drive is resistive pulldown */
+#define FLAG_STRONG	16	/* Gpio drive is strong (fast output) */
+#define FLAG_HIZ	17	/* Gpio drive is Hi-Z (input) */
 
 	/* Connection label */
 	const char		*label;
