@@ -82,12 +82,6 @@ static const struct i2c_device_id pca953x_id[] = {
 };
 MODULE_DEVICE_TABLE(i2c, pca953x_id);
 
-static const struct acpi_device_id pca953x_acpi_ids[] = {
-	{ "INT3491", 16 | PCA953X_TYPE | PCA_INT | PCA_PCAL, },
-	{ }
-};
-MODULE_DEVICE_TABLE(acpi, pca953x_acpi_ids);
-
 #define MAX_BANK 5
 #define BANK_SZ 8
 
@@ -118,6 +112,35 @@ static inline struct pca953x_chip *to_pca(struct gpio_chip *gc)
 {
 	return container_of(gc, struct pca953x_chip, gpio_chip);
 }
+
+struct pca953x_info {
+	kernel_ulong_t driver_data;
+	void (*setup)(struct pca953x_chip *chip);
+};
+
+static void pca953x_setup_int3491(struct pca953x_chip *chip)
+{
+	struct acpi_device *adev = ACPI_COMPANION(&chip->client->dev);
+	unsigned int uid;
+
+	if (kstrtouint(acpi_device_uid(adev), 0, &uid) || !uid--)
+		return;
+
+	chip->gpio_start = 8 /* sch_gpio */ +
+			   8 /* gpio-dwapb */ +
+			  16 /* pca9535 */ * uid;
+}
+
+static const struct pca953x_info pca953x_info_int3491 = {
+	.driver_data = 16 | PCA953X_TYPE | PCA_INT | PCA_PCAL,
+	.setup = pca953x_setup_int3491,
+};
+
+static const struct acpi_device_id pca953x_acpi_ids[] = {
+	{ "INT3491",  (kernel_ulong_t)&pca953x_info_int3491 },
+	{ }
+};
+MODULE_DEVICE_TABLE(acpi, pca953x_acpi_ids);
 
 static int pca953x_read_single(struct pca953x_chip *chip, int reg, u32 *val,
 				int off)
@@ -731,12 +754,19 @@ static int pca953x_probe(struct i2c_client *client,
 		chip->driver_data = id->driver_data;
 	} else {
 		const struct acpi_device_id *id;
+		const struct pca953x_info *info;
 
 		id = acpi_match_device(pca953x_acpi_ids, &client->dev);
 		if (!id)
 			return -ENODEV;
 
-		chip->driver_data = id->driver_data;
+		info = (struct pca953x_info *)id->driver_data;
+		if (!info)
+			return -ENODEV;
+
+		chip->driver_data = info->driver_data;
+		if (info->setup)
+			info->setup(chip);
 	}
 
 	chip->chip_type = PCA_CHIP_TYPE(chip->driver_data);
