@@ -40,6 +40,8 @@
 #define PCA957X_INTS		7
 
 #define PCAL953X_IN_LATCH	34
+#define PCAL953X_PUPD_EN	35
+#define PCAL953X_PUPD_SEL	36
 #define PCAL953X_INT_MASK	37
 #define PCAL953X_INT_STAT	38
 
@@ -380,6 +382,43 @@ exit:
 	mutex_unlock(&chip->i2c_lock);
 }
 
+static int pca953x_gpio_set_drive(struct gpio_chip *gc,
+				 unsigned off, unsigned mode)
+{
+	struct pca953x_chip *chip;
+	int ret = 0;
+	int val;
+
+	chip = container_of(gc, struct pca953x_chip, gpio_chip);
+
+	if (!(chip->driver_data & PCA_PCAL))
+		return -EINVAL;
+
+	mutex_lock(&chip->i2c_lock);
+
+	switch (mode) {
+	case GPIOF_DRIVE_PULLUP:
+		ret = pca953x_write_single(chip, PCAL953X_PUPD_EN, 1, off) ||
+			pca953x_write_single(chip, PCAL953X_PUPD_SEL, 1, off);
+		break;
+	case GPIOF_DRIVE_PULLDOWN:
+		ret = pca953x_write_single(chip, PCAL953X_PUPD_EN, 1, off) ||
+			pca953x_write_single(chip, PCAL953X_PUPD_SEL, 0, off);
+		break;
+	case GPIOF_DRIVE_STRONG:
+	case GPIOF_DRIVE_HIZ:
+		ret = pca953x_read_single(chip, PCAL953X_PUPD_EN, &val, off) ||
+			pca953x_write_single(chip, PCAL953X_PUPD_EN, 0, off) ||
+			pca953x_write_single(chip, PCAL953X_PUPD_SEL, val, off);
+		break;
+	default:
+		ret = -EINVAL;
+	}
+
+	mutex_unlock(&chip->i2c_lock);
+	return ret;
+}
+
 static void pca953x_setup_gpio(struct pca953x_chip *chip, int gpios)
 {
 	struct gpio_chip *gc;
@@ -398,6 +437,9 @@ static void pca953x_setup_gpio(struct pca953x_chip *chip, int gpios)
 	gc->dev = &chip->client->dev;
 	gc->owner = THIS_MODULE;
 	gc->names = chip->names;
+
+	if (chip->driver_data & PCA_PCAL)
+		gc->set_drive = pca953x_gpio_set_drive;
 }
 
 #ifdef CONFIG_GPIO_PCA953X_IRQ

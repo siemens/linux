@@ -96,6 +96,10 @@ struct gpio_desc {
 #define FLAG_OPEN_SOURCE 8	/* Gpio is open source type */
 #define FLAG_USED_AS_IRQ 9	/* GPIO is connected to an IRQ */
 #define FLAG_IS_HOGGED	11	/* GPIO is hogged */
+#define FLAG_PULLUP	12	/* Gpio drive is resistive pullup */
+#define FLAG_PULLDOWN	13	/* Gpio drive is resistive pulldown */
+#define FLAG_STRONG	14	/* Gpio drive is strong (fast output) */
+#define FLAG_HIZ	15	/* Gpio drive is Hi-Z (input) */
 
 	/* Connection label */
 	const char		*label;
