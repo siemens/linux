@@ -10,6 +10,7 @@
  * published by the Free Software Foundation.
  */
 
+#include <linux/dmi.h>
 #include <linux/errno.h>
 #include <linux/gpio.h>
 #include <linux/gpio/consumer.h>
@@ -407,6 +408,13 @@ static int acpi_find_gpio(struct acpi_resource *ares, void *data)
 
 		if (pin_index >= agpio->pin_table_length)
 			return 1;
+
+		if (!strcmp(dmi_get_system_info(DMI_BOARD_NAME),
+			    "SIMATIC IOT2000") &&
+		    !strcmp(agpio->resource_source.string_ptr,
+			    "\\_SB.PCI0.GIP0.GPO") &&
+		    agpio->pin_table[pin_index] == 9)
+			agpio->pin_table[pin_index] = 1;
 
 		lookup->desc = acpi_get_gpiod(agpio->resource_source.string_ptr,
 					      agpio->pin_table[pin_index]);
