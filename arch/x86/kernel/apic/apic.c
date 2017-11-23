@@ -196,6 +196,7 @@ static struct resource lapic_resource = {
 };
 
 unsigned int lapic_timer_period = 0;
+EXPORT_SYMBOL_GPL(lapic_timer_period);
 
 static void apic_pm_activate(void);
 
