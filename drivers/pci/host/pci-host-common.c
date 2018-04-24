@@ -28,11 +28,11 @@ static int gen_pci_parse_request_of_pci_ranges(struct device *dev,
 		       struct list_head *resources, struct resource **bus_range)
 {
 	int err, res_valid = 0;
-	struct device_node *np = dev->of_node;
 	resource_size_t iobase;
 	struct resource_entry *win, *tmp;
 
-	err = of_pci_get_host_bridge_resources(np, 0, 0xff, resources, &iobase);
+	err = devm_of_pci_get_host_bridge_resources(dev, 0, 0xff, resources,
+						    &iobase);
 	if (err)
 		return err;
 
