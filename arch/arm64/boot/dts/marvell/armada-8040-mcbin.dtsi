@@ -177,6 +177,7 @@
 };
 
 &cp0_pcie0 {
+	linux,pci-domain = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&cp0_pcie_pins>;
 	num-lanes = <4>;
