@@ -980,7 +980,7 @@ static inline bool is_cpu_allowed(struct task_struct *p, int cpu)
 	if (!cpumask_test_cpu(cpu, p->cpus_ptr))
 		return false;
 
-	if (is_per_cpu_kthread(p))
+	if (is_per_cpu_kthread(p) || __migrate_disabled(p))
 		return cpu_online(cpu);
 
 	return cpu_active(cpu);
@@ -1107,7 +1107,7 @@ void set_cpus_allowed_common(struct task_struct *p, const struct cpumask *new_ma
 	p->nr_cpus_allowed = cpumask_weight(new_mask);
 }
 
-#if defined(CONFIG_PREEMPT_COUNT) && defined(CONFIG_SMP)
+#if defined(CONFIG_SMP) && defined(CONFIG_PREEMPT_RT_BASE)
 int __migrate_disabled(struct task_struct *p)
 {
 	return p->migrate_disable;
@@ -1146,7 +1146,7 @@ static void __do_set_cpus_allowed_tail(struct task_struct *p,
 
 void do_set_cpus_allowed(struct task_struct *p, const struct cpumask *new_mask)
 {
-#if defined(CONFIG_PREEMPT_COUNT) && defined(CONFIG_SMP)
+#if defined(CONFIG_SMP) && defined(CONFIG_PREEMPT_RT_BASE)
 	if (__migrate_disabled(p)) {
 		lockdep_assert_held(&p->pi_lock);
 
@@ -1219,7 +1219,7 @@ static int __set_cpus_allowed_ptr(struct task_struct *p,
 	if (cpumask_test_cpu(task_cpu(p), new_mask) || __migrate_disabled(p))
 		goto out;
 
-#if defined(CONFIG_PREEMPT_COUNT) && defined(CONFIG_SMP)
+#if defined(CONFIG_SMP) && defined(CONFIG_PREEMPT_RT_BASE)
 	if (__migrate_disabled(p)) {
 		p->migrate_disable_update = 1;
 		goto out;
@@ -3482,10 +3482,15 @@ static inline void sched_submit_work(struct task_struct *tsk)
 	/*
 	 * If a worker went to sleep, notify and ask workqueue whether
 	 * it wants to wake up a task to maintain concurrency.
+	 * As this function is called inside the schedule() context,
+	 * we disable preemption to avoid it calling schedule() again
+	 * in the possible wakeup of a kworker.
 	 */
-	if (tsk->flags & PF_WQ_WORKER)
+	if (tsk->flags & PF_WQ_WORKER) {
+		preempt_disable();
 		wq_worker_sleeping(tsk);
-
+		preempt_enable_no_resched();
+	}
 
 	if (tsk_is_pi_blocked(tsk))
 		return;
@@ -5751,6 +5756,18 @@ int sched_cpu_activate(unsigned int cpu)
 	struct rq *rq = cpu_rq(cpu);
 	struct rq_flags rf;
 
+#ifdef CONFIG_SCHED_SMT
+	/*
+	 * The sched_smt_present static key needs to be evaluated on every
+	 * hotplug event because at boot time SMT might be disabled when
+	 * the number of booted CPUs is limited.
+	 *
+	 * If then later a sibling gets hotplugged, then the key would stay
+	 * off and SMT scheduling would never be functional.
+	 */
+	if (cpumask_weight(cpu_smt_mask(cpu)) > 1)
+		static_branch_enable_cpuslocked(&sched_smt_present);
+#endif
 	set_cpu_active(cpu, true);
 
 	if (sched_smp_initialized) {
@@ -5850,22 +5867,6 @@ int sched_cpu_dying(unsigned int cpu)
 }
 #endif
 
-#ifdef CONFIG_SCHED_SMT
-DEFINE_STATIC_KEY_FALSE(sched_smt_present);
-
-static void sched_init_smt(void)
-{
-	/*
-	 * We've enumerated all CPUs and will assume that if any CPU
-	 * has SMT siblings, CPU0 will too.
-	 */
-	if (cpumask_weight(cpu_smt_mask(0)) > 1)
-		static_branch_enable(&sched_smt_present);
-}
-#else
-static inline void sched_init_smt(void) { }
-#endif
-
 void __init sched_init_smp(void)
 {
 	cpumask_var_t non_isolated_cpus;
@@ -5894,8 +5895,6 @@ void __init sched_init_smp(void)
 
 	init_sched_rt_class();
 	init_sched_dl_class();
-
-	sched_init_smt();
 
 	sched_smp_initialized = true;
 }
@@ -6903,7 +6902,7 @@ const u32 sched_prio_to_wmult[40] = {
  /*  15 */ 119304647, 148102320, 186737708, 238609294, 286331153,
 };
 
-#if defined(CONFIG_PREEMPT_COUNT) && defined(CONFIG_SMP)
+#if defined(CONFIG_SMP) && defined(CONFIG_PREEMPT_RT_BASE)
 
 static inline void
 update_nr_migratory(struct task_struct *p, long delta)
@@ -7054,45 +7053,44 @@ EXPORT_SYMBOL(migrate_enable);
 #elif !defined(CONFIG_SMP) && defined(CONFIG_PREEMPT_RT_BASE)
 void migrate_disable(void)
 {
+#ifdef CONFIG_SCHED_DEBUG
 	struct task_struct *p = current;
 
 	if (in_atomic() || irqs_disabled()) {
-#ifdef CONFIG_SCHED_DEBUG
 		p->migrate_disable_atomic++;
-#endif
 		return;
 	}
-#ifdef CONFIG_SCHED_DEBUG
+
 	if (unlikely(p->migrate_disable_atomic)) {
 		tracing_off();
 		WARN_ON_ONCE(1);
 	}
-#endif
 
 	p->migrate_disable++;
+#endif
+	barrier();
 }
 EXPORT_SYMBOL(migrate_disable);
 
 void migrate_enable(void)
 {
+#ifdef CONFIG_SCHED_DEBUG
 	struct task_struct *p = current;
 
 	if (in_atomic() || irqs_disabled()) {
-#ifdef CONFIG_SCHED_DEBUG
 		p->migrate_disable_atomic--;
-#endif
 		return;
 	}
 
-#ifdef CONFIG_SCHED_DEBUG
 	if (unlikely(p->migrate_disable_atomic)) {
 		tracing_off();
 		WARN_ON_ONCE(1);
 	}
-#endif
 
 	WARN_ON_ONCE(p->migrate_disable <= 0);
 	p->migrate_disable--;
+#endif
+	barrier();
 }
 EXPORT_SYMBOL(migrate_enable);
 #endif
