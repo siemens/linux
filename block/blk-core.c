@@ -201,6 +201,7 @@ void blk_rq_init(struct request_queue *q, struct request *rq)
 	rq->internal_tag = -1;
 	rq->start_time_ns = ktime_get_ns();
 	rq->part = NULL;
+	refcount_set(&rq->ref, 1);
 }
 EXPORT_SYMBOL(blk_rq_init);
 
@@ -423,24 +424,25 @@ void blk_sync_queue(struct request_queue *q)
 EXPORT_SYMBOL(blk_sync_queue);
 
 /**
- * blk_set_preempt_only - set QUEUE_FLAG_PREEMPT_ONLY
+ * blk_set_pm_only - increment pm_only counter
  * @q: request queue pointer
- *
- * Returns the previous value of the PREEMPT_ONLY flag - 0 if the flag was not
- * set and 1 if the flag was already set.
  */
-int blk_set_preempt_only(struct request_queue *q)
+void blk_set_pm_only(struct request_queue *q)
 {
-	return blk_queue_flag_test_and_set(QUEUE_FLAG_PREEMPT_ONLY, q);
+	atomic_inc(&q->pm_only);
 }
-EXPORT_SYMBOL_GPL(blk_set_preempt_only);
+EXPORT_SYMBOL_GPL(blk_set_pm_only);
 
-void blk_clear_preempt_only(struct request_queue *q)
+void blk_clear_pm_only(struct request_queue *q)
 {
-	blk_queue_flag_clear(QUEUE_FLAG_PREEMPT_ONLY, q);
-	wake_up_all(&q->mq_freeze_wq);
+	int pm_only;
+
+	pm_only = atomic_dec_return(&q->pm_only);
+	WARN_ON_ONCE(pm_only < 0);
+	if (pm_only == 0)
+		wake_up_all(&q->mq_freeze_wq);
 }
-EXPORT_SYMBOL_GPL(blk_clear_preempt_only);
+EXPORT_SYMBOL_GPL(blk_clear_pm_only);
 
 /**
  * __blk_run_queue_uncond - run a queue whether or not it has been stopped
@@ -918,7 +920,7 @@ EXPORT_SYMBOL(blk_alloc_queue);
  */
 int blk_queue_enter(struct request_queue *q, blk_mq_req_flags_t flags)
 {
-	const bool preempt = flags & BLK_MQ_REQ_PREEMPT;
+	const bool pm = flags & BLK_MQ_REQ_PREEMPT;
 
 	while (true) {
 		bool success = false;
@@ -926,11 +928,11 @@ int blk_queue_enter(struct request_queue *q, blk_mq_req_flags_t flags)
 		rcu_read_lock();
 		if (percpu_ref_tryget_live(&q->q_usage_counter)) {
 			/*
-			 * The code that sets the PREEMPT_ONLY flag is
-			 * responsible for ensuring that that flag is globally
-			 * visible before the queue is unfrozen.
+			 * The code that increments the pm_only counter is
+			 * responsible for ensuring that that counter is
+			 * globally visible before the queue is unfrozen.
 			 */
-			if (preempt || !blk_queue_preempt_only(q)) {
+			if (pm || !blk_queue_pm_only(q)) {
 				success = true;
 			} else {
 				percpu_ref_put(&q->q_usage_counter);
@@ -955,7 +957,7 @@ int blk_queue_enter(struct request_queue *q, blk_mq_req_flags_t flags)
 
 		wait_event(q->mq_freeze_wq,
 			   (atomic_read(&q->mq_freeze_depth) == 0 &&
-			    (preempt || !blk_queue_preempt_only(q))) ||
+			    (pm || !blk_queue_pm_only(q))) ||
 			   blk_queue_dying(q));
 		if (blk_queue_dying(q))
 			return -ENODEV;
@@ -967,10 +969,10 @@ void blk_queue_exit(struct request_queue *q)
 	percpu_ref_put(&q->q_usage_counter);
 }
 
-static void blk_queue_usage_counter_release_swork(struct swork_event *sev)
+static void blk_queue_usage_counter_release_wrk(struct work_struct *work)
 {
 	struct request_queue *q =
-		container_of(sev, struct request_queue, mq_pcpu_wake);
+		container_of(work, struct request_queue, mq_pcpu_wake);
 
 	wake_up_all(&q->mq_freeze_wq);
 }
@@ -981,7 +983,7 @@ static void blk_queue_usage_counter_release(struct percpu_ref *ref)
 		container_of(ref, struct request_queue, q_usage_counter);
 
 	if (wq_has_sleeper(&q->mq_freeze_wq))
-		swork_queue(&q->mq_pcpu_wake);
+		schedule_work(&q->mq_pcpu_wake);
 }
 
 static void blk_rq_timed_out_timer(struct timer_list *t)
@@ -1078,7 +1080,7 @@ struct request_queue *blk_alloc_queue_node(gfp_t gfp_mask, int node_id,
 	queue_flag_set_unlocked(QUEUE_FLAG_BYPASS, q);
 
 	init_waitqueue_head(&q->mq_freeze_wq);
-	INIT_SWORK(&q->mq_pcpu_wake, blk_queue_usage_counter_release_swork);
+	INIT_WORK(&q->mq_pcpu_wake, blk_queue_usage_counter_release_wrk);
 
 	/*
 	 * Init percpu_ref in atomic mode so that it's faster to shutdown.
@@ -3967,8 +3969,6 @@ int __init blk_dev_init(void)
 					    WQ_MEM_RECLAIM | WQ_HIGHPRI, 0);
 	if (!kblockd_workqueue)
 		panic("Failed to create kblockd\n");
-
-	BUG_ON(swork_get());
 
 	request_cachep = kmem_cache_create("blkdev_requests",
 			sizeof(struct request), 0, SLAB_PANIC, NULL);
