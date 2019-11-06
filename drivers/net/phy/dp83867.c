@@ -53,6 +53,10 @@
 #define DP83867_10M_SGMII_CFG   0x016F
 #define DP83867_10M_SGMII_RATE_ADAPT_MASK BIT(7)
 
+/*RJ45 led configuration*/
+#define DP83867_LEDCR_1      0x0018
+#define RJ45_LED_SETTING     0x665b
+
 #define DP83867_SW_RESET	BIT(15)
 #define DP83867_SW_RESTART	BIT(14)
 
@@ -482,6 +486,9 @@ static int dp83867_verify_rgmii_cfg(struct phy_device *phydev)
 		phydev_err(phydev, "ti,tx-internal-delay must be specified\n");
 		return -EINVAL;
 	}
+
+	/*Set the RJ45 led action*/
+	phy_write_mmd(phydev, DP83867_DEVADDR, DP83867_LEDCR_1, RJ45_LED_SETTING);
 
 	return 0;
 }
