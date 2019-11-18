@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * (C) Copyright 2019 Siemens AG
+ */
+
+/dts-v1/;
+/* TBD: should include the Dual Core dtsi*/
+#include "../ti/k3-am654.dtsi"
+#include "iot2050-common.dtsi"
+
+/ {
+	model = "SIMATIC IOT2050-BASIC";
+
+	memory@80000000 {
+		device_type = "memory";
+		/* 1G RAM */
+		reg = <0x00000000 0x80000000 0x00000000 0x40000000>;
+	};
+
+	cpus {
+		cpu-map {
+			/delete-node/ cluster1;
+		};
+		/delete-node/ cpu@100;
+		/delete-node/ cpu@101;
+	};
+};
+
+&main_pmx0 {
+	main_uart0_pins_default: main-uart0-pins-default {
+		pinctrl-single,pins = <
+			AM65X_IOPAD(0x01e4, PIN_INPUT,  0)  /* (AF11) UART0_RXD */
+			AM65X_IOPAD(0x01e8, PIN_OUTPUT, 0)  /* (AE11) UART0_TXD */
+			AM65X_IOPAD(0x01ec, PIN_INPUT,  0)  /* (AG11) UART0_CTSn */
+			AM65X_IOPAD(0x01f0, PIN_OUTPUT, 0)  /* (AD11) UART0_RTSn */
+			AM65X_IOPAD(0x0188, PIN_INPUT,  1)  /* (D25) UART0_DCDn */
+			AM65X_IOPAD(0x018c, PIN_INPUT,  1)  /* (B26) UART0_DSRn */
+			AM65X_IOPAD(0x0190, PIN_OUTPUT, 1)  /* (A24) UART0_DTRn */
+			AM65X_IOPAD(0x0194, PIN_INPUT,  1)  /* (E24) UART0_RIN */
+		>;
+	};
+};
+
+&main_uart0 {
+	pinctrl-names = "default";
+	pinctrl-0 = <&main_uart0_pins_default>;
+
+	/* workaround for uart issues (DMA warnings and RCU preempt) */
+	/delete-property/ dmas;
+	/delete-property/ dma-names;
+};
+
+&sdhci0 {
+	status = "disabled";
+};
