@@ -191,17 +191,11 @@ struct platform_s2idle_ops {
 	int (*begin)(void);
 	int (*prepare)(void);
 	int (*prepare_late)(void);
-	void (*wake)(void);
+	bool (*wake)(void);
 	void (*restore_early)(void);
 	void (*restore)(void);
 	void (*end)(void);
 };
-
-#if defined(CONFIG_SUSPEND) || defined(CONFIG_HIBERNATION)
-extern bool pm_in_action;
-#else
-# define pm_in_action false
-#endif
 
 #ifdef CONFIG_SUSPEND
 extern suspend_state_t mem_sleep_current;

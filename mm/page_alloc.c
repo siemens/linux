@@ -2883,14 +2883,6 @@ static void drain_pages(unsigned int cpu)
 	}
 }
 
-void drain_cpu_pages(unsigned int cpu, struct zone *zone)
-{
-	if (zone)
-		drain_pages_zone(cpu, zone);
-	else
-		drain_pages(cpu);
-}
-
 /*
  * Spill all of this CPU's per-cpu pages back into the buddy allocator.
  *
@@ -2901,7 +2893,10 @@ void drain_local_pages(struct zone *zone)
 {
 	int cpu = smp_processor_id();
 
-	drain_cpu_pages(cpu, zone);
+	if (zone)
+		drain_pages_zone(cpu, zone);
+	else
+		drain_pages(cpu);
 }
 
 static void drain_local_pages_wq(struct work_struct *work)
@@ -2917,9 +2912,9 @@ static void drain_local_pages_wq(struct work_struct *work)
 	 * cpu which is allright but we also have to make sure to not move to
 	 * a different one.
 	 */
-	preempt_disable();
+	migrate_disable();
 	drain_local_pages(drain->zone);
-	preempt_enable();
+	migrate_enable();
 }
 
 /*
@@ -2988,20 +2983,15 @@ void drain_all_pages(struct zone *zone)
 			cpumask_clear_cpu(cpu, &cpus_with_pcps);
 	}
 
-	if (static_branch_likely(&use_pvec_lock)) {
-		for_each_cpu(cpu, &cpus_with_pcps)
-			drain_cpu_pages(cpu, zone);
-	} else {
-		for_each_cpu(cpu, &cpus_with_pcps) {
-			struct pcpu_drain *drain = per_cpu_ptr(&pcpu_drain, cpu);
+	for_each_cpu(cpu, &cpus_with_pcps) {
+		struct pcpu_drain *drain = per_cpu_ptr(&pcpu_drain, cpu);
 
-			drain->zone = zone;
-			INIT_WORK(&drain->work, drain_local_pages_wq);
-			queue_work_on(cpu, mm_percpu_wq, &drain->work);
-		}
-		for_each_cpu(cpu, &cpus_with_pcps)
-			flush_work(&per_cpu_ptr(&pcpu_drain, cpu)->work);
+		drain->zone = zone;
+		INIT_WORK(&drain->work, drain_local_pages_wq);
+		queue_work_on(cpu, mm_percpu_wq, &drain->work);
 	}
+	for_each_cpu(cpu, &cpus_with_pcps)
+		flush_work(&per_cpu_ptr(&pcpu_drain, cpu)->work);
 
 	mutex_unlock(&pcpu_drain_mutex);
 }
@@ -7018,7 +7008,8 @@ static u64 zero_pfn_range(unsigned long spfn, unsigned long epfn)
  * This function also addresses a similar issue where struct pages are left
  * uninitialized because the physical address range is not covered by
  * memblock.memory or memblock.reserved. That could happen when memblock
- * layout is manually configured via memmap=.
+ * layout is manually configured via memmap=, or when the highest physical
+ * address (max_pfn) does not end on a section boundary.
  */
 void __init zero_resv_unavail(void)
 {
@@ -7036,7 +7027,16 @@ void __init zero_resv_unavail(void)
 			pgcnt += zero_pfn_range(PFN_DOWN(next), PFN_UP(start));
 		next = end;
 	}
-	pgcnt += zero_pfn_range(PFN_DOWN(next), max_pfn);
+
+	/*
+	 * Early sections always have a fully populated memmap for the whole
+	 * section - see pfn_valid(). If the last section has holes at the
+	 * end and that section is marked "online", the memmap will be
+	 * considered initialized. Make sure that memmap has a well defined
+	 * state.
+	 */
+	pgcnt += zero_pfn_range(PFN_DOWN(next),
+				round_up(max_pfn, PAGES_PER_SECTION));
 
 	/*
 	 * Struct pages that do not have backing memory. This could be because
@@ -7676,8 +7676,9 @@ void __init free_area_init(unsigned long *zones_size)
 
 static int page_alloc_cpu_dead(unsigned int cpu)
 {
-
+	local_lock_irq_on(swapvec_lock, cpu);
 	lru_add_drain_cpu(cpu);
+	local_unlock_irq_on(swapvec_lock, cpu);
 	drain_pages(cpu);
 
 	/*
