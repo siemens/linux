@@ -1,0 +1,21 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * (C) Copyright 2019 Siemens AG
+ */
+
+/dts-v1/;
+#include "iot2050-basic.dts"
+
+/* Compat support for bootloader V01.00.00.1 */
+
+&ospi0 {
+	clocks = <&k3_clks 55 5>;
+	assigned-clocks = <&k3_clks 55 5>;
+	assigned-clock-parents = <&k3_clks 55 7>;
+	power-domains = <&k3_pds 55 TI_SCI_PD_EXCLUSIVE>;
+};
+
+&ospi1 {
+	clocks = <&k3_clks 55 16>;
+	power-domains = <&k3_pds 55 TI_SCI_PD_EXCLUSIVE>;
+};

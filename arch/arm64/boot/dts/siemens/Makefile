@@ -7,7 +7,7 @@
 
 DTC_FLAGS += -@
 
-dtb-$(CONFIG_ARCH_K3_AM6_SOC) += iot2050-basic.dtb \
+dtb-$(CONFIG_ARCH_K3_AM6_SOC) += iot2050-basic.dtb iot2050-basic-oldfw.dtb \
 	iot2050-advanced.dtb
 
 $(obj)/%.dtbo: $(src)/%.dtso FORCE
