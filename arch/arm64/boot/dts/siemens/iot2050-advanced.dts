@@ -51,6 +51,9 @@
 	clocks = <&k3_clks 48 0>, <&k3_clks 48 1>;
 	assigned-clocks = <&k3_clks 48 1>;
 	assigned-clock-rates = <142860000>;
+
+	power-domains = <&k3_pds 47 TI_SCI_PD_SHARED>;
+
 	pinctrl-names = "default";
 	pinctrl-0 = <&main_mmc0_pins_default>;
 	bus-width = <8>;
