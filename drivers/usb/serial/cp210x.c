@@ -401,6 +401,9 @@ static struct usb_serial_driver * const serial_drivers[] = {
 #define CP210X_PARTNUM_CP2102N_QFN20	0x22
 #define CP210X_PARTNUM_UNKNOWN	0xFF
 
+#define CP210X_VSTART	0x11
+#define CP210X_VSTOP	0x13
+
 /* CP210X_GET_COMM_STATUS returns these 0x13 bytes */
 struct cp210x_comm_status {
 	__le32   ulErrors;
@@ -410,6 +413,15 @@ struct cp210x_comm_status {
 	u8       bEofReceived;
 	u8       bWaitForImmediate;
 	u8       bReserved;
+} __packed;
+
+struct cp210x_chars_response {
+	u8	eofchar;
+	u8	errochar;
+	u8	breakchar;
+	u8	eventchar;
+	u8	xonchar;
+	u8	xoffchar;
 } __packed;
 
 /*
@@ -668,6 +680,45 @@ static int cp210x_read_vendor_block(struct usb_serial *serial, u8 type, u16 val,
 			bufsize, result);
 		if (result >= 0)
 			result = -EIO;
+	}
+
+	kfree(dmabuf);
+
+	return result;
+}
+
+/*
+ * Read and Write Character Responses operate
+ * Register SET_CHARS/GET_CHATS
+ */
+static int cp210x_operate_chars_block(struct usb_serial_port *port,
+				u8 req, u8 type, void *buf, int bufsize)
+{
+	struct usb_serial *serial = port->serial;
+	struct cp210x_port_private *port_priv = usb_get_serial_port_data(port);
+	void *dmabuf;
+	int result;
+
+	dmabuf = kmemdup(buf, bufsize, GFP_KERNEL);
+	if (!dmabuf)
+		return -ENOMEM;
+
+	result = usb_control_msg(serial->dev,
+				usb_rcvctrlpipe(serial->dev, 0),
+				req, type, 0, port_priv->bInterfaceNumber,
+				dmabuf, bufsize, USB_CTRL_SET_TIMEOUT);
+
+	if (result == bufsize) {
+		if (type == REQTYPE_DEVICE_TO_HOST)
+			memcpy(buf, dmabuf, bufsize);
+
+		result = 0;
+	} else {
+		dev_err(&port->dev, "failed get req 0x%x size %d status: %d\n",
+			req, bufsize, result);
+		if (result >= 0)
+			result = -EIO;
+
 	}
 
 	kfree(dmabuf);
@@ -1356,11 +1407,17 @@ static void cp210x_set_termios(struct tty_struct *tty,
 		struct usb_serial_port *port, struct ktermios *old_termios)
 {
 	struct device *dev = &port->dev;
-	unsigned int cflag, old_cflag;
+	struct cp210x_chars_response charsres;
+	struct cp210x_flow_ctl flow_ctl;
+	unsigned int cflag, old_cflag, iflag;
 	u16 bits;
+	int result;
+	u32 ctl_hs;
+	u32 flow_repl;
 
 	cflag = tty->termios.c_cflag;
 	old_cflag = old_termios->c_cflag;
+	iflag = tty->termios.c_iflag;
 
 	if (tty->termios.c_ospeed != old_termios->c_ospeed)
 		cp210x_change_speed(tty, port, old_termios);
@@ -1434,10 +1491,6 @@ static void cp210x_set_termios(struct tty_struct *tty,
 	}
 
 	if ((cflag & CRTSCTS) != (old_cflag & CRTSCTS)) {
-		struct cp210x_flow_ctl flow_ctl;
-		u32 ctl_hs;
-		u32 flow_repl;
-
 		cp210x_read_reg_block(port, CP210X_GET_FLOW, &flow_ctl,
 				sizeof(flow_ctl));
 		ctl_hs = le32_to_cpu(flow_ctl.ulControlHandshake);
@@ -1482,6 +1535,62 @@ static void cp210x_set_termios(struct tty_struct *tty,
 		cp210x_enable_event_mode(port);
 	else
 		cp210x_disable_event_mode(port);
+
+	/*
+	 * Set Software  Flow  Control
+	 * Check the IXOFF/IXON status in the iflag component of the
+	 * termios structure.
+	 *
+	 */
+	if ((iflag & IXOFF) || (iflag & IXON)) {
+
+		result = cp210x_operate_chars_block(port,
+						CP210X_GET_CHARS,
+						REQTYPE_DEVICE_TO_HOST,
+						&charsres,
+						sizeof(charsres));
+
+		if (result < 0) {
+			dev_err(dev, "Read Characrter Responses failed\n");
+			return;
+		}
+		charsres.xonchar  = CP210X_VSTART;
+		charsres.xoffchar = CP210X_VSTOP;
+		result = cp210x_operate_chars_block(port,
+						CP210X_SET_CHARS,
+						REQTYPE_HOST_TO_INTERFACE,
+						&charsres,
+						sizeof(charsres));
+		if (result < 0) {
+			memset(&charsres, 0, sizeof(charsres));
+			dev_err(dev, "Write Characrter Responses failed\n");
+			return;
+		}
+
+		/*Set  Rx/Tx Flow Contrl  Flag in ulFlowReplace*/
+		cp210x_read_reg_block(port,
+					CP210X_GET_FLOW,
+					&flow_ctl,
+					sizeof(flow_ctl));
+
+		flow_repl = le32_to_cpu(flow_ctl.ulFlowReplace);
+
+		if (iflag & IXOFF)
+			flow_repl |= CP210X_SERIAL_AUTO_RECEIVE;
+		else
+			flow_repl &= ~CP210X_SERIAL_AUTO_RECEIVE;
+
+		if (iflag & IXON)
+			flow_repl |= CP210X_SERIAL_AUTO_TRANSMIT;
+		else
+			flow_repl &= ~CP210X_SERIAL_AUTO_TRANSMIT;
+
+		flow_ctl.ulFlowReplace = cpu_to_le32(flow_repl);
+		cp210x_write_reg_block(port,
+					CP210X_SET_FLOW,
+					&flow_ctl,
+					sizeof(flow_ctl));
+	}
 }
 
 static int cp210x_tiocmset(struct tty_struct *tty,
