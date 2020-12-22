@@ -32,6 +32,7 @@ static void led_trigger_set_panic(struct led_classdev *led_cdev)
 		/* Avoid the delayed blink path */
 		led_cdev->blink_delay_on = 0;
 		led_cdev->blink_delay_off = 0;
+		led_cdev->work_flags = 0;
 
 		led_cdev->trigger = trig;
 		if (trig->activate)
@@ -46,7 +47,9 @@ static int led_trigger_panic_notifier(struct notifier_block *nb,
 	struct led_classdev *led_cdev;
 
 	list_for_each_entry(led_cdev, &leds_list, node)
-		if (led_cdev->flags & LED_PANIC_INDICATOR)
+		if (led_cdev->flags & (LED_PANIC_INDICATOR |
+				       LED_PANIC_INDICATOR_OFF |
+				       LED_PANIC_INDICATOR_ON))
 			led_trigger_set_panic(led_cdev);
 	return NOTIFY_DONE;
 }

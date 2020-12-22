@@ -99,8 +99,12 @@ static int create_gpio_led(const struct gpio_led *template,
 	led_dat->cdev.brightness = state ? LED_FULL : LED_OFF;
 	if (!template->retain_state_suspended)
 		led_dat->cdev.flags |= LED_CORE_SUSPENDRESUME;
-	if (template->panic_indicator)
+	if (template->panic_indicator == LEDS_PANICINDICATOR_BLINK)
 		led_dat->cdev.flags |= LED_PANIC_INDICATOR;
+	else if (template->panic_indicator == LEDS_PANICINDICATOR_OFF)
+		led_dat->cdev.flags |= LED_PANIC_INDICATOR_OFF;
+	else if (template->panic_indicator == LEDS_PANICINDICATOR_ON)
+		led_dat->cdev.flags |= LED_PANIC_INDICATOR_ON;
 	if (template->retain_state_shutdown)
 		led_dat->cdev.flags |= LED_RETAIN_AT_SHUTDOWN;
 
@@ -175,7 +179,11 @@ static struct gpio_leds_priv *gpio_leds_create(struct platform_device *pdev)
 		if (fwnode_property_present(child, "retain-state-shutdown"))
 			led.retain_state_shutdown = 1;
 		if (fwnode_property_present(child, "panic-indicator"))
-			led.panic_indicator = 1;
+			led.panic_indicator = LEDS_PANICINDICATOR_BLINK;
+		else if (fwnode_property_present(child, "panic-indicator-off"))
+			led.panic_indicator = LEDS_PANICINDICATOR_OFF;
+		else if (fwnode_property_present(child, "panic-indicator-on"))
+			led.panic_indicator = LEDS_PANICINDICATOR_ON;
 
 		ret = create_gpio_led(&led, led_dat, dev, child, NULL);
 		if (ret < 0) {
