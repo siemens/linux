@@ -171,4 +171,12 @@ config CPMAC
 	help
 	  TI AR7 CPMAC Ethernet support
 
+config TI_ICSS_IEP
+	tristate "TI PRU ICSS IEP driver"
+	depends on TI_PRUSS
+	default TI_PRUSS
+	help
+	  This enables support for the PRU-ICSS Industrial Ethernet Peripheral
+	  within a PRU-ICSS subsystem present on various TI SoCs.
+
 endif # NET_VENDOR_TI
