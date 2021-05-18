@@ -29,3 +29,6 @@ ti-am65-cpsw-nuss-y := am65-cpsw-nuss.o cpsw_sl.o am65-cpsw-ethtool.o cpsw_ale.o
 obj-$(CONFIG_TI_K3_AM65_CPTS) += am65-cpts.o
 
 obj-$(CONFIG_TI_ICSS_IEP) += icss_iep.o
+
+obj-$(CONFIG_TI_ICSSG_PRUETH) += icssg-prueth.o
+icssg-prueth-y := icssg_prueth.o icssg_classifier.o icssg_ethtool.o icssg_queues.o icssg_config.o k3-cppi-desc-pool.o
