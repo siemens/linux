@@ -1008,8 +1008,6 @@ static void htb_reset(struct Qdisc *sch)
 	}
 	qdisc_watchdog_cancel(&q->watchdog);
 	__qdisc_reset_queue(&q->direct_queue);
-	sch->q.qlen = 0;
-	sch->qstats.backlog = 0;
 	memset(q->hlevel, 0, sizeof(q->hlevel));
 	memset(q->row_mask, 0, sizeof(q->row_mask));
 }
@@ -1805,6 +1803,26 @@ static int htb_change_class(struct Qdisc *sch, u32 classid,
 	hopt = nla_data(tb[TCA_HTB_PARMS]);
 	if (!hopt->rate.rate || !hopt->ceil.rate)
 		goto failure;
+
+	if (q->offload) {
+		/* Options not supported by the offload. */
+		if (hopt->rate.overhead || hopt->ceil.overhead) {
+			NL_SET_ERR_MSG(extack, "HTB offload doesn't support the overhead parameter");
+			goto failure;
+		}
+		if (hopt->rate.mpu || hopt->ceil.mpu) {
+			NL_SET_ERR_MSG(extack, "HTB offload doesn't support the mpu parameter");
+			goto failure;
+		}
+		if (hopt->quantum) {
+			NL_SET_ERR_MSG(extack, "HTB offload doesn't support the quantum parameter");
+			goto failure;
+		}
+		if (hopt->prio) {
+			NL_SET_ERR_MSG(extack, "HTB offload doesn't support the prio parameter");
+			goto failure;
+		}
+	}
 
 	/* Keeping backward compatible with rate_table based iproute2 tc */
 	if (hopt->rate.linklayer == TC_LINKLAYER_UNAWARE)

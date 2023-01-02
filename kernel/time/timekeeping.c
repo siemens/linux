@@ -17,11 +17,13 @@
 #include <linux/clocksource.h>
 #include <linux/jiffies.h>
 #include <linux/time.h>
+#include <linux/timex.h>
 #include <linux/tick.h>
 #include <linux/stop_machine.h>
 #include <linux/pvclock_gtod.h>
 #include <linux/compiler.h>
 #include <linux/audit.h>
+#include <linux/random.h>
 
 #include "tick-internal.h"
 #include "ntp_internal.h"
@@ -203,23 +205,22 @@ static void timekeeping_check_update(struct timekeeper *tk, u64 offset)
 	const char *name = tk->tkr_mono.clock->name;
 
 	if (offset > max_cycles) {
-		printk("WARNING: timekeeping: Cycle offset (%lld) is larger than allowed by the '%s' clock's max_cycles value (%lld): time overflow danger\n",
-		       offset, name, max_cycles);
-		printk("         timekeeping: Your kernel is sick, but tries to cope by capping time updates\n");
+		printk_deferred("WARNING: timekeeping: Cycle offset (%lld) is larger than allowed by the '%s' clock's max_cycles value (%lld): time overflow danger\n",
+				offset, name, max_cycles);
+		printk_deferred("         timekeeping: Your kernel is sick, but tries to cope by capping time updates\n");
 	} else {
 		if (offset > (max_cycles >> 1)) {
-			printk("INFO: timekeeping: Cycle offset (%lld) is larger than the '%s' clock's 50%% safety margin (%lld)\n",
-			       offset, name, max_cycles >> 1);
-			printk("      timekeeping: Your kernel is still fine, but is feeling a bit nervous\n");
+			printk_deferred("INFO: timekeeping: Cycle offset (%lld) is larger than the '%s' clock's 50%% safety margin (%lld)\n",
+					offset, name, max_cycles >> 1);
+			printk_deferred("      timekeeping: Your kernel is still fine, but is feeling a bit nervous\n");
 		}
 	}
 
 	if (tk->underflow_seen) {
 		if (jiffies - tk->last_warning > WARNING_FREQ) {
-			printk("WARNING: Underflow in clocksource '%s' observed, time update ignored.\n",
-			       name);
-			printk("         Please report this, consider using a different clocksource, if possible.\n");
-			printk("         Your kernel is probably still fine.\n");
+			printk_deferred("WARNING: Underflow in clocksource '%s' observed, time update ignored.\n", name);
+			printk_deferred("         Please report this, consider using a different clocksource, if possible.\n");
+			printk_deferred("         Your kernel is probably still fine.\n");
 			tk->last_warning = jiffies;
 		}
 		tk->underflow_seen = 0;
@@ -227,10 +228,9 @@ static void timekeeping_check_update(struct timekeeper *tk, u64 offset)
 
 	if (tk->overflow_seen) {
 		if (jiffies - tk->last_warning > WARNING_FREQ) {
-			printk("WARNING: Overflow in clocksource '%s' observed, time update capped.\n",
-			       name);
-			printk("         Please report this, consider using a different clocksource, if possible.\n");
-			printk("         Your kernel is probably still fine.\n");
+			printk_deferred("WARNING: Overflow in clocksource '%s' observed, time update capped.\n", name);
+			printk_deferred("         Please report this, consider using a different clocksource, if possible.\n");
+			printk_deferred("         Your kernel is probably still fine.\n");
 			tk->last_warning = jiffies;
 		}
 		tk->overflow_seen = 0;
@@ -484,7 +484,7 @@ static __always_inline u64 __ktime_get_fast_ns(struct tk_fast *tkf)
  * of the following timestamps. Callers need to be aware of that and
  * deal with it.
  */
-u64 ktime_get_mono_fast_ns(void)
+u64 notrace ktime_get_mono_fast_ns(void)
 {
 	return __ktime_get_fast_ns(&tk_fast_mono);
 }
@@ -496,7 +496,7 @@ EXPORT_SYMBOL_GPL(ktime_get_mono_fast_ns);
  * Contrary to ktime_get_mono_fast_ns() this is always correct because the
  * conversion factor is not affected by NTP/PTP correction.
  */
-u64 ktime_get_raw_fast_ns(void)
+u64 notrace ktime_get_raw_fast_ns(void)
 {
 	return __ktime_get_fast_ns(&tk_fast_raw);
 }
@@ -1308,8 +1308,7 @@ int do_settimeofday64(const struct timespec64 *ts)
 	timekeeping_forward_now(tk);
 
 	xt = tk_xtime(tk);
-	ts_delta.tv_sec = ts->tv_sec - xt.tv_sec;
-	ts_delta.tv_nsec = ts->tv_nsec - xt.tv_nsec;
+	ts_delta = timespec64_sub(*ts, xt);
 
 	if (timespec64_compare(&tk->wall_to_monotonic, &ts_delta) > 0) {
 		ret = -EINVAL;
@@ -1328,8 +1327,10 @@ out:
 	/* Signal hrtimers about time change */
 	clock_was_set(CLOCK_SET_WALL);
 
-	if (!ret)
+	if (!ret) {
 		audit_tk_injoffset(ts_delta);
+		add_device_randomness(ts, sizeof(*ts));
+	}
 
 	return ret;
 }
@@ -1671,7 +1672,9 @@ static void __timekeeping_inject_sleeptime(struct timekeeper *tk,
 					   const struct timespec64 *delta)
 {
 	if (!timespec64_valid_strict(delta)) {
-		pr_warn("%s: Invalid sleep delta value!\n", __func__);
+		printk_deferred(KERN_WARNING
+				"__timekeeping_inject_sleeptime: Invalid "
+				"sleep delta value!\n");
 		return;
 	}
 	tk_xtime_add(tk, delta);
@@ -2381,6 +2384,20 @@ static int timekeeping_validate_timex(const struct __kernel_timex *txc)
 	return 0;
 }
 
+/**
+ * random_get_entropy_fallback - Returns the raw clock source value,
+ * used by random.c for platforms with no valid random_get_entropy().
+ */
+unsigned long random_get_entropy_fallback(void)
+{
+	struct tk_read_base *tkr = &tk_core.timekeeper.tkr_mono;
+	struct clocksource *clock = READ_ONCE(tkr->clock);
+
+	if (unlikely(timekeeping_suspended || !clock))
+		return 0;
+	return clock->read(clock);
+}
+EXPORT_SYMBOL_GPL(random_get_entropy_fallback);
 
 /**
  * do_adjtimex() - Accessor function to NTP __do_adjtimex function
@@ -2399,6 +2416,7 @@ int do_adjtimex(struct __kernel_timex *txc)
 	ret = timekeeping_validate_timex(txc);
 	if (ret)
 		return ret;
+	add_device_randomness(txc, sizeof(*txc));
 
 	if (txc->modes & ADJ_SETOFFSET) {
 		struct timespec64 delta;
@@ -2416,6 +2434,7 @@ int do_adjtimex(struct __kernel_timex *txc)
 	audit_ntp_init(&ad);
 
 	ktime_get_real_ts64(&ts);
+	add_device_randomness(&ts, sizeof(ts));
 
 	raw_spin_lock_irqsave(&timekeeper_lock, flags);
 	write_seqcount_begin(&tk_core.seq);

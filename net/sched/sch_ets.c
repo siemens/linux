@@ -666,9 +666,9 @@ static int ets_qdisc_change(struct Qdisc *sch, struct nlattr *opt,
 		}
 	}
 	for (i = q->nbands; i < oldbands; i++) {
-		qdisc_tree_flush_backlog(q->classes[i].qdisc);
-		if (i >= q->nstrict)
+		if (i >= q->nstrict && q->classes[i].qdisc->q.qlen)
 			list_del(&q->classes[i].alist);
+		qdisc_tree_flush_backlog(q->classes[i].qdisc);
 	}
 	q->nstrict = nstrict;
 	memcpy(q->prio2band, priomap, sizeof(priomap));
@@ -727,8 +727,6 @@ static void ets_qdisc_reset(struct Qdisc *sch)
 	}
 	for (band = 0; band < q->nbands; band++)
 		qdisc_reset(q->classes[band].qdisc);
-	sch->qstats.backlog = 0;
-	sch->q.qlen = 0;
 }
 
 static void ets_qdisc_destroy(struct Qdisc *sch)
