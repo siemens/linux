@@ -96,6 +96,17 @@ config PING
 	  To compile this driver as a module, choose M here: the
 	  module will be called ping.
 
+config PM16D17
+	tristate "PM16D17 proximity sensor"
+	select REGMAP_I2C
+	depends on I2C
+	help
+	 Say Y here to build a driver for the Everlight Devices
+	 PM16D17 proximity sensor.
+
+	 To compile this driver as a module, choose M here: the
+	 module will be called pm16d17.
+
 config RFD77402
 	tristate "RFD77402 ToF sensor"
 	depends on I2C
