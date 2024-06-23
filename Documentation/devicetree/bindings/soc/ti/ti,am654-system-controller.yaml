@@ -29,10 +29,29 @@ properties:
 
   ranges: true
 
+  dss-oldi-io-ctrl@41e0:
+    type: object
+    $ref: /schemas/mfd/syscon.yaml#
+    properties:
+      compatible:
+        items:
+          - const: ti,am654-dss-oldi-io-ctrl
+          - const: syscon
+
+  clock-controller@4140:
+    type: object
+    $ref: /schemas/clock/ti,am654-ehrpwm-tbclk.yaml#
+    description:
+      Clock provider for TI EHRPWM nodes.
+
 patternProperties:
   "^phy@[0-9a-f]+$":
     type: object
     $ref: /schemas/phy/ti,phy-gmii-sel.yaml#
+
+  "^clock@[0-9a-f]+$":
+    type: object
+    $ref: /schemas/soc/ti/ti,am654-serdes-ctrl.yaml#
 
 required:
   - compatible
