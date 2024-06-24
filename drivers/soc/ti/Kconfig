@@ -82,6 +82,10 @@ config TI_PRUSS
 	  processors on various TI SoCs. It's safe to say N here if you're
 	  not interested in the PRU or if you are unsure.
 
+config TI_PVU
+	bool "TI Peripheral Virtualization Unit driver"
+	depends on ARCH_K3 && DMA_RESTRICTED_POOL
+
 endif # SOC_TI
 
 config TI_SCI_INTA_MSI_DOMAIN
