@@ -82,6 +82,11 @@
 			reg = <0x00 0xa2200000 0x00 0x1000>;
 			no-map;
 		};
+
+		pci_restricted_dma_region: restricted-dma@ba000000 {
+			compatible = "restricted-dma-pool";
+			reg = <0 0xba000000 0 0x4000000>;
+		};
 	};
 
 	leds {
@@ -571,6 +576,10 @@
 	};
 };
 
+&pcie0_rc {
+	memory-region = <&pci_restricted_dma_region>;
+};
+
 &pcie1_rc {
 	status = "okay";
 	pinctrl-names = "default";
@@ -580,6 +589,8 @@
 	phys = <&serdes1 PHY_TYPE_PCIE 0>;
 	phy-names = "pcie-phy0";
 	reset-gpios = <&wkup_gpio0 27 GPIO_ACTIVE_HIGH>;
+
+	memory-region = <&pci_restricted_dma_region>;
 };
 
 &mailbox0_cluster0 {
@@ -639,4 +650,25 @@
 &mcu_r5fss0 {
 	/* lock-step mode not supported on iot2050 boards */
 	ti,cluster-mode = <0>;
+};
+
+&main_navss {
+	ti_pvu0: ti-pvu@30f80000 {
+		compatible = "ti,am654-pvu";
+		reg = <0 0x30f80000 0 0x1000>,
+		      <0 0x36000000 0 0x100000>;
+		reg-names = "cfg", "tlbif";
+		interrupts-extended = <&intr_main_navss 390>;
+		interrupt-names = "pvu";
+	};
+
+	ti_pvu1: ti-pvu@30f81000 {
+		compatible = "ti,am654-pvu";
+		reg = <0 0x30f81000 0 0x1000>,
+		      <0 0x36100000 0 0x100000>;
+		reg-names = "cfg", "tlbif";
+		interrupts-extended = <&intr_main_navss 389>;
+		interrupt-names = "pvu";
+		status = "disabled";
+	};
 };
