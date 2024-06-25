@@ -158,6 +158,16 @@
 		compatible = "st,lsm6dso";
 		reg = <0x6a>;
 	};
+
+	proximitysensor: pm16d17@44 {
+		compatible = "everlight,pm16d17";
+		reg = <0x44>;
+
+		ps-gain = <1>;
+		ps-itime = "0.4";
+		ps-wtime = "25";
+		ps-ir-led-pulse-count = <1>;
+	};
 };
 
 &dss {
